@@ -5,7 +5,15 @@ import 'notifications_screen.dart';
 import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  // 1. DEĞİŞİKLİK: Hem isim hem de e-posta bilgisini dışarıdan alıyoruz
+  final String userName;
+  final String userEmail; 
+  
+  const MainScreen({
+    Key? key, 
+    this.userName = 'Kullanıcı', 
+    this.userEmail = '' // Varsayılan olarak boş atadık
+  }) : super(key: key);
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -14,15 +22,20 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const AllergenProfileScreen(),
-    const NotificationsScreen(),
-    const SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    // 2. DEĞİŞİKLİK: Ekran listesini build içine aldık ki widget değişkenlerine erişebilelim
+    final List<Widget> _screens = [
+      // Ana sayfaya hem ismi hem de e-postayı gönderiyoruz
+      HomeScreen(
+        userName: widget.userName, 
+        userEmail: widget.userEmail
+      ), 
+      const AllergenProfileScreen(),
+      const NotificationsScreen(),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: _screens[_currentIndex],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart';        // Aynı klasörde oldukları için direkt isim yeterli
-import 'forgot_password_screen.dart'; // Aynı klasörde
-import 'main_screen.dart';            // Aynı klasörde
+import 'register_screen.dart';
+import 'forgot_password_screen.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -24,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
           content: const Text('Lütfen tüm alanları doldurun'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
       return;
@@ -36,16 +35,38 @@ class _LoginScreenState extends State<LoginScreen> {
           content: const Text('KVKK metnini okuyup onaylamalısınız'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
       return;
     }
 
-    // Başarılı giriş
+    // --- DİNAMİNAMİK İSİM ÇIKARMA MANTIĞI ---
+    String email = _emailController.text.trim();
+    String userName = "Kullanıcı"; 
+
+    if (email.contains('@')) {
+      // 1. @ işaretinden öncesini al (örn: ikbalgokce24)
+      String rawName = email.split('@')[0];
+      
+      // 2. Sayıları temizle (örn: ikbalgokce)
+      rawName = rawName.replaceAll(RegExp(r'[0-9]'), '');
+
+      // 3. İlk harfi büyüt (örn: Ikbalgokce)
+      if (rawName.isNotEmpty) {
+        userName = rawName[0].toUpperCase() + rawName.substring(1);
+      }
+    }
+    // ----------------------------------------
+
+    // Başarılı giriş - Hem Dinamik İsmi hem de Tam Maili gönderiyoruz
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MainScreen()),
+      MaterialPageRoute(
+        builder: (context) => MainScreen(
+          userName: userName,
+          userEmail: email, // Profilde görünmesi için tam maili de ekledik
+        ),
+      ),
     );
   }
 
@@ -107,7 +128,7 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade500,
+                    backgroundColor: Colors.cyan.shade600,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -128,15 +149,15 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFFE5E5),
-              Color(0xFFFFE8CC),
-              Color(0xFFFFF4E0),
-              Color(0xFFE8F8F5),
+              Color(0xFFE0F7FA), 
+              Color(0xFF80DEEA), 
+              Color(0xFF26C6DA), 
+              Color(0xFF0097A7), 
             ],
             stops: [0.0, 0.35, 0.65, 1.0],
           ),
@@ -148,24 +169,23 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo ve Başlık
                   Container(
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.blue.shade500, Colors.purple.shade600],
+                        colors: [Colors.cyan.shade400, Colors.blue.shade600],
                       ),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
+                          color: Colors.cyan.withOpacity(0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.medical_services, color: Colors.white, size: 50),
+                    child: const Icon(Icons.health_and_safety, color: Colors.white, size: 50),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -173,17 +193,11 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black26, offset: Offset(0, 2), blurRadius: 4)],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sağlığınız bizim önceliğimiz',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
                   const SizedBox(height: 40),
-
-                  // Login Form Container
                   Container(
                     constraints: const BoxConstraints(maxWidth: 400),
                     decoration: BoxDecoration(
@@ -191,7 +205,7 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Colors.black12,
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -201,64 +215,47 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           'Giriş Yap',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Colors.cyan.shade800,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
-
-                        // Email Field
                         TextField(
                           controller: _emailController,
                           decoration: InputDecoration(
                             labelText: 'E-posta',
-                            prefixIcon: Icon(Icons.email, color: Colors.blue.shade500),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            prefixIcon: Icon(Icons.email, color: Colors.cyan.shade600),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+                              borderSide: BorderSide(color: Colors.cyan.shade600, width: 2),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Password Field
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
                             labelText: 'Şifre',
-                            prefixIcon: Icon(Icons.lock, color: Colors.blue.shade500),
+                            prefixIcon: Icon(Icons.lock, color: Colors.cyan.shade600),
                             suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+                              borderSide: BorderSide(color: Colors.cyan.shade600, width: 2),
                             ),
                           ),
                         ),
                         const SizedBox(height: 12),
-
-                        // Remember Me & Forgot Password
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -266,54 +263,29 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                               children: [
                                 Checkbox(
                                   value: _rememberMe,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                                  activeColor: Colors.blue.shade500,
+                                  onChanged: (v) => setState(() => _rememberMe = v!),
+                                  activeColor: Colors.cyan.shade600,
                                 ),
-                                const Text('Beni Hatırla', style: TextStyle(fontSize: 14)),
+                                const Text('Beni Hatırla'),
                               ],
                             ),
                             TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ForgotPasswordScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Şifremi Unuttum',
-                                style: TextStyle(
-                                  color: Colors.blue.shade600,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ForgotPasswordScreen())),
+                              child: Text('Şifremi Unuttum', style: TextStyle(color: Colors.cyan.shade700, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-
-                        // KVKK Checkbox
                         InkWell(
                           onTap: _showKVKKDialog,
                           child: Row(
                             children: [
                               Checkbox(
                                 value: _kvkkAccepted,
-                                onChanged: (value) {
-                                  if (value == true) {
-                                    _showKVKKDialog();
-                                  } else {
-                                    setState(() {
-                                      _kvkkAccepted = false;
-                                    });
-                                  }
+                                onChanged: (v) {
+                                  if(v == true) _showKVKKDialog();
+                                  else setState(() => _kvkkAccepted = false);
                                 },
-                                activeColor: Colors.blue.shade500,
+                                activeColor: Colors.cyan.shade600,
                               ),
                               Expanded(
                                 child: RichText(
@@ -321,15 +293,8 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                                     style: const TextStyle(fontSize: 13, color: Colors.black87),
                                     children: [
                                       const TextSpan(text: 'KVKK '),
-                                      TextSpan(
-                                        text: 'Aydınlatma Metni',
-                                        style: TextStyle(
-                                          color: Colors.blue.shade600,
-                                          fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                      const TextSpan(text: '\'ni okudum ve onaylıyorum'),
+                                      TextSpan(text: 'Aydınlatma Metni', style: TextStyle(color: Colors.cyan.shade700, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                                      const TextSpan(text: '\'ni onaylıyorum'),
                                     ],
                                   ),
                                 ),
@@ -338,55 +303,25 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Login Button
                         SizedBox(
                           height: 50,
                           child: ElevatedButton(
                             onPressed: _login,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade500,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
+                              backgroundColor: Colors.cyan.shade600,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text(
-                              'Giriş Yap',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: const Text('Giriş Yap', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Register Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'Hesabınız yok mu? ',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
+                            const Text('Hesabınız yok mu? '),
                             TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const RegisterScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Kayıt Ol',
-                                style: TextStyle(
-                                  color: Colors.blue.shade600,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
+                              child: Text('Kayıt Ol', style: TextStyle(color: Colors.cyan.shade700, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),

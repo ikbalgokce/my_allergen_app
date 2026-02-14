@@ -2,7 +2,138 @@ import 'package:flutter/material.dart';
 import 'add_medicine_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final String userName;
+  final String userEmail; // Yeni: MainScreen'den gelen e-posta adresi
+  
+  const HomeScreen({
+    Key? key, 
+    required this.userName, 
+    required this.userEmail // E-posta artık zorunlu
+  }) : super(key: key);
+
+  // --- PROFİL DİALOGU (Tıklayınca açılan pencere) ---
+  void _showProfileDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profil Resmi (Avatar) - Baş harfe göre dinamik renk ve harf
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade400, Colors.purple.shade500],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // İsim bilgisi
+              Text(
+                userName,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Kullanıcı Hesabı',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+
+              // Bilgi Kartı - Giriş verileriyle tutarlı hale getirildi
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    // ARTIK TUTARLI: Giriş yapılan mail buraya gelir
+                    _buildProfileInfoRow(Icons.email, 'E-posta', userEmail), 
+                    const Divider(),
+                    // Henüz alınmayan bilgiler için dürüst geri bildirim
+                    _buildProfileInfoRow(Icons.phone, 'Telefon', 'Henüz belirtilmedi'),
+                    const Divider(),
+                    _buildProfileInfoRow(Icons.location_on, 'Konum', 'Konya, Türkiye'),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Kapat Butonu
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Kapat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.blue.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text(
+                  value, 
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
+                  overflow: TextOverflow.ellipsis, // Uzun mailler taşmasın diye
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,9 +143,9 @@ class HomeScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFE3F2FD), // Açık mavi
-            Color(0xFFF3E5F5), // Açık mor
-            Color(0xFFE8F5E9), // Açık yeşil (sağlık teması)
+            Color(0xFFE3F2FD),
+            Color(0xFFF3E5F5),
+            Color(0xFFE8F5E9),
             Colors.white,
           ],
           stops: [0.0, 0.3, 0.6, 1.0],
@@ -27,16 +158,16 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header (Başlık ve Profil İkonu)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Merhaba! 👋',
-                          style: TextStyle(
+                        Text(
+                          'Merhaba $userName! 👋',
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -52,23 +183,35 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue.shade500, Colors.purple.shade600],
+                    
+                    // PROFİL İKONU (Tıklanabilir yapıldı)
+                    InkWell(
+                      onTap: () => _showProfileDialog(context),
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.blue.shade500, Colors.purple.shade600],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        borderRadius: BorderRadius.circular(15),
+                        child: const Icon(Icons.person, color: Colors.white, size: 28),
                       ),
-                      child: const Icon(Icons.person, color: Colors.white, size: 28),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 24),
 
-                // Quick Actions
+                // Hızlı İşlemler
                 Row(
                   children: [
                     Expanded(
@@ -109,7 +252,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Today's Medicines
+                // Bugünkü İlaçlar Listesi
                 const Text(
                   'BUGÜNKÜ İLAÇLAR',
                   style: TextStyle(
@@ -142,7 +285,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Stats Card
+                // Haftalık İstatistik Kartı
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
