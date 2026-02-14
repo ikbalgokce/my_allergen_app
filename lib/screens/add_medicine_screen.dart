@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'qr_scanner_screen.dart';
 
 class AddMedicineScreen extends StatefulWidget {
   final String initialMethod;
@@ -137,68 +138,29 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     );
   }
 
-  void _scanQRCode() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.qr_code_scanner,
-                    size: 80,
-                    color: Colors.white.withOpacity(0.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'QR Kodu Tarayın',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'İlaç kutusundaki QR kodu kamera ile tarayın',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      selectedMethod = 'manual';
-                    });
-                  },
-                  child: const Text('İptal'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  // YENİ HALİ (Kamerayı açan kod)
+  void _scanQRCode() async {
+    // Kamerayı açacak olan sayfaya git
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => QRScannerScreen()),
     );
+
+    // Eğer tarama yapıldıysa ve bir sonuç döndüyse
+    if (result != null) {
+      setState(() {
+        // Gelen QR kodunu ilaç adına yazalım (Örnek olarak)
+        _medicineNameController.text = result; 
+        selectedMethod = 'manual'; // Manuel forma geri dön
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('QR Kod Okundu: $result'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
