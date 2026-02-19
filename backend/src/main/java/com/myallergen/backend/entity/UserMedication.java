@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,8 +12,6 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "kullanici_ilac")
 @IdClass(UserMedicationId.class)
-@Getter
-@Setter
 public class UserMedication {
 
     @Id
@@ -40,4 +36,63 @@ public class UserMedication {
 
     @Column(name = "hatirlatma_saati")
     private LocalTime hatirlatmaSaati;
+
+    public UserMedication() {
+    }
+
+    public Integer getKullaniciId() {
+        return kullaniciId;
+    }
+
+    public void setKullaniciId(Integer kullaniciId) {
+        this.kullaniciId = kullaniciId;
+    }
+
+    public Integer getIlacId() {
+        return ilacId;
+    }
+
+    public void setIlacId(Integer ilacId) {
+        this.ilacId = ilacId;
+    }
+
+    public String getIlacDozu() {
+        return ilacDozu;
+    }
+
+    public void setIlacDozu(String ilacDozu) {
+        this.ilacDozu = ilacDozu;
+    }
+
+    public LocalDate getBaslangicTarihi() {
+        return baslangicTarihi;
+    }
+
+    public void setBaslangicTarihi(LocalDate baslangicTarihi) {
+        this.baslangicTarihi = baslangicTarihi;
+    }
+
+    public LocalDate getBitisTarihi() {
+        return bitisTarihi;
+    }
+
+    public void setBitisTarihi(LocalDate bitisTarihi) {
+        this.bitisTarihi = bitisTarihi;
+    }
+
+    public String getKullanimSikligi() {
+        return kullanimSikligi;
+    }
+
+    public void setKullanimSikligi(String kullanimSikligi) {
+        this.kullanimSikligi = kullanimSikligi;
+    }
+
+    public LocalTime getHatirlatmaSaati() {
+        return hatirlatmaSaati;
+    }
+
+    public void setHatirlatmaSaati(LocalTime hatirlatmaSaati) {
+        this.hatirlatmaSaati = hatirlatmaSaati;
+    }
 }

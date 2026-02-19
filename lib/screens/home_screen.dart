@@ -273,7 +273,10 @@ class _HomeScreenState extends State<HomeScreen> {
             title: 'Ilac Ekle',
             color: Colors.blue,
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddMedicineScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AddMedicineScreen(userId: widget.userId)),
+              );
             },
           ),
         ),
@@ -287,7 +290,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AddMedicineScreen(initialMethod: 'qr')),
+                MaterialPageRoute(
+                  builder: (_) => AddMedicineScreen(userId: widget.userId, initialMethod: 'qr'),
+                ),
               );
             },
           ),
