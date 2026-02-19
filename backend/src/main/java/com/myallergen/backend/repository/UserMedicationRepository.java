@@ -24,4 +24,15 @@ public interface UserMedicationRepository extends JpaRepository<UserMedication, 
             nativeQuery = true
     )
     List<TodayMedicationProjection> findTodayMedicationRows(@Param("userId") Integer userId);
+
+    @Query(
+            value = "SELECT "
+                    + "i.ilac_adi AS ilacAdi, "
+                    + "i.etkin_madde AS etkinMadde "
+                    + "FROM kullanici_ilac ui "
+                    + "INNER JOIN ilaclar i ON i.id = ui.ilac_id "
+                    + "WHERE ui.kullanici_id = :userId",
+            nativeQuery = true
+    )
+    List<UserMedicationRiskProjection> findRiskRows(@Param("userId") Integer userId);
 }

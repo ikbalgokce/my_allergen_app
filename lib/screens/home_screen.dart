@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/risk_warning_service.dart';
 import '../services/today_medications_service.dart';
 import '../services/user_profile_service.dart';
 import 'add_medicine_screen.dart';
@@ -26,11 +27,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TodayMedicationsService _todayMedicationsService = TodayMedicationsService();
+  final RiskWarningService _riskWarningService = RiskWarningService();
   final Map<String, bool> _takenState = {};
 
   bool _isLoading = true;
   String? _loadError;
   List<TodayMedicationItem> _todayMedications = const [];
+  RiskWarningResult _riskWarning = const RiskWarningResult(risk: false, message: '', matchedItems: []);
   late String _userName;
   late String _userEmail;
 
@@ -40,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _userName = widget.userName;
     _userEmail = widget.userEmail;
     _loadTodayMedications();
+    _loadRiskWarning();
   }
 
   Future<void> _loadTodayMedications() async {
@@ -69,6 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _loadRiskWarning() async {
+    final warning = await _riskWarningService.getRiskWarning(widget.userId);
+    if (!mounted) return;
+    setState(() => _riskWarning = warning);
   }
 
   String _keyOf(TodayMedicationItem item) => '${item.ilacId}_${item.hatirlatmaSaati}';
@@ -147,6 +157,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildHeader(),
                   const SizedBox(height: 24),
                   _buildQuickActions(context),
+                  if (_riskWarning.risk) ...[
+                    const SizedBox(height: 16),
+                    _buildRiskWarningBox(),
+                  ],
                   const SizedBox(height: 24),
                   const Text(
                     'BUGUNKU ILACLAR',
@@ -166,6 +180,53 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRiskWarningBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        border: Border.all(color: Colors.red.shade300, width: 1.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '!!! ${_riskWarning.message}',
+                  style: TextStyle(
+                    color: Colors.red.shade800,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_riskWarning.matchedItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ..._riskWarning.matchedItems.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  '- $item',
+                  style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
