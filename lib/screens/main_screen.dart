@@ -32,13 +32,13 @@ class _MainScreenState extends State<MainScreen> {
         userName: widget.userName,
         userEmail: widget.userEmail,
       ),
-      const AllergenProfileScreen(),
+      AllergenProfileScreen(userId: widget.userId),
       const NotificationsScreen(),
       const SettingsScreen(),
     ];
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
