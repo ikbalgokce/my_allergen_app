@@ -6,19 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "medications")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Medication {
 
     @Id
@@ -37,4 +27,47 @@ public class Medication {
 
     @Column(name = "hatirlatma_saati", length = 30)
     private String hatirlatmaSaati;
+
+    public Medication() {
+    }
+
+    public Integer getIlacId() {
+        return ilacId;
+    }
+
+    public void setIlacId(Integer ilacId) {
+        this.ilacId = ilacId;
+    }
+
+    public String getIlacAdi() {
+        return ilacAdi;
+    }
+
+    public void setIlacAdi(String ilacAdi) {
+        this.ilacAdi = ilacAdi;
+    }
+
+    public String getIlacDozu() {
+        return ilacDozu;
+    }
+
+    public void setIlacDozu(String ilacDozu) {
+        this.ilacDozu = ilacDozu;
+    }
+
+    public String getKullanimSikligi() {
+        return kullanimSikligi;
+    }
+
+    public void setKullanimSikligi(String kullanimSikligi) {
+        this.kullanimSikligi = kullanimSikligi;
+    }
+
+    public String getHatirlatmaSaati() {
+        return hatirlatmaSaati;
+    }
+
+    public void setHatirlatmaSaati(String hatirlatmaSaati) {
+        this.hatirlatmaSaati = hatirlatmaSaati;
+    }
 }

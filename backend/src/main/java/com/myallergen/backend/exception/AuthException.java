@@ -3,7 +3,6 @@ package com.myallergen.backend.exception;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-@Getter
 public class AuthException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
@@ -12,5 +11,13 @@ public class AuthException extends RuntimeException {
         super(message);
         this.status = status;
         this.code = code;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+
+    public String getCode() {
+        return code;
     }
 }

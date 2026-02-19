@@ -34,12 +34,11 @@ public class MedicationServiceImpl implements MedicationService {
 
     @Override
     public MedicationItemResponse create(MedicationRequest request) {
-        Medication medication = Medication.builder()
-                .ilacAdi(request.ilacAdi())
-                .ilacDozu(request.ilacDozu())
-                .kullanimSikligi(request.kullanimSikligi())
-                .hatirlatmaSaati(request.hatirlatmaSaati())
-                .build();
+        Medication medication = new Medication();
+        medication.setIlacAdi(request.ilacAdi());
+        medication.setIlacDozu(request.ilacDozu());
+        medication.setKullanimSikligi(request.kullanimSikligi());
+        medication.setHatirlatmaSaati(request.hatirlatmaSaati());
 
         Medication saved = medicationRepository.save(medication);
         return toResponse(saved);

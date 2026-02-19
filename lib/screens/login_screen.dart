@@ -67,11 +67,28 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (result.statusCode == 200 && result.success) {
+        if (result.userId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Kullanici bilgisi alinamadi'),
+              backgroundColor: Colors.red.shade600,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+        final fullName = [result.ad, result.soyad]
+            .where((e) => e != null && e!.trim().isNotEmpty)
+            .map((e) => e!.trim())
+            .join(' ');
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => MainScreen(
-              userName: (result.ad?.trim().isNotEmpty ?? false) ? result.ad!.trim() : 'Kullanici',
+              userId: result.userId!,
+              userName: fullName.isNotEmpty ? fullName : 'Kullanici',
               userEmail: _emailController.text.trim(),
             ),
           ),
