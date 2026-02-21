@@ -1,335 +1,556 @@
+﻿import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/medication_create_service.dart';
+import '../services/risk_warning_service.dart';
+import '../services/today_medications_service.dart';
+import '../services/user_profile_service.dart';
 import 'add_medicine_screen.dart';
+import 'drug_information_screen.dart';
+import 'profile_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  final int userId;
   final String userName;
-  final String userEmail; // Yeni: MainScreen'den gelen e-posta adresi
-  
+  final String userEmail;
+
   const HomeScreen({
-    Key? key, 
-    required this.userName, 
-    required this.userEmail // E-posta artık zorunlu
-  }) : super(key: key);
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.userEmail,
+  });
 
-  // --- PROFİL DİALOGU (Tıklayınca açılan pencere) ---
-  void _showProfileDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Profil Resmi (Avatar) - Baş harfe göre dinamik renk ve harf
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade400, Colors.purple.shade500],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // İsim bilgisi
-              Text(
-                userName,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Kullanıcı Hesabı',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-              // Bilgi Kartı - Giriş verileriyle tutarlı hale getirildi
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    // ARTIK TUTARLI: Giriş yapılan mail buraya gelir
-                    _buildProfileInfoRow(Icons.email, 'E-posta', userEmail), 
-                    const Divider(),
-                    // Henüz alınmayan bilgiler için dürüst geri bildirim
-                    _buildProfileInfoRow(Icons.phone, 'Telefon', 'Henüz belirtilmedi'),
-                    const Divider(),
-                    _buildProfileInfoRow(Icons.location_on, 'Konum', 'Konya, Türkiye'),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Kapat Butonu
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('Kapat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+class _HomeScreenState extends State<HomeScreen> {
+  final TodayMedicationsService _todayMedicationsService = TodayMedicationsService();
+  final MedicationCreateService _medicationCreateService = MedicationCreateService();
+  final RiskWarningService _riskWarningService = RiskWarningService();
+
+  final Map<String, bool> _takenState = {};
+
+  bool _isLoading = true;
+  String? _loadError;
+  List<TodayMedicationItem> _todayMedications = const [];
+  RiskWarningResult _riskWarning = const RiskWarningResult(risk: false, message: '', matchedItems: []);
+  late String _userName;
+  late String _userEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _userName = widget.userName;
+    _userEmail = widget.userEmail;
+    _loadTodayMedications();
+    _loadRiskWarning();
   }
 
-  Widget _buildProfileInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.blue.shade700),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                Text(
-                  value, 
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis, // Uzun mailler taşmasın diye
-                ),
-              ],
-            ),
+  Future<void> _loadTodayMedications() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      final items = await _todayMedicationsService.fetchTodayMedications(widget.userId);
+      await _loadTakenStateFromStorage(items);
+      if (!mounted) return;
+      setState(() => _todayMedications = items);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadError = 'İlaç bilgileri yüklenemedi');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadRiskWarning() async {
+    final warning = await _riskWarningService.getRiskWarning(widget.userId);
+    if (!mounted) return;
+    setState(() => _riskWarning = warning);
+  }
+
+  List<String> _usageTimes(TodayMedicationItem item) {
+    final raw = item.hatirlatmaSaati.trim();
+    if (raw.isEmpty || raw == '-') return const ['-'];
+    return raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
+
+  String _usageKey(TodayMedicationItem item, String time) => '${item.ilacId}_$time';
+
+  bool _isAllTaken(TodayMedicationItem item) {
+    final times = _usageTimes(item);
+    if (times.isEmpty) return false;
+    return times.every((t) => _takenState[_usageKey(item, t)] ?? false);
+  }
+
+  String get _dateKey {
+    final now = DateTime.now();
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    return '${now.year}-$mm-$dd';
+  }
+
+  String get _takenStorageKey => 'taken_${widget.userId}_$_dateKey';
+
+  Future<void> _loadTakenStateFromStorage(List<TodayMedicationItem> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_takenStorageKey);
+    final savedKeys = (raw == null || raw.isEmpty)
+        ? <String>{}
+        : (jsonDecode(raw) as List<dynamic>).cast<String>().toSet();
+
+    _takenState.clear();
+    for (final item in items) {
+      for (final time in _usageTimes(item)) {
+        final key = _usageKey(item, time);
+        _takenState[key] = savedKeys.contains(key);
+      }
+    }
+  }
+
+  Future<void> _saveTakenStateToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final takenKeys = _takenState.entries.where((entry) => entry.value).map((entry) => entry.key).toList();
+    await prefs.setString(_takenStorageKey, jsonEncode(takenKeys));
+  }
+
+  Future<void> _toggleTaken(TodayMedicationItem item, String time) async {
+    if (time == '-') return;
+    final key = _usageKey(item, time);
+    setState(() => _takenState[key] = !(_takenState[key] ?? false));
+    await _saveTakenStateToStorage();
+  }
+
+  Future<void> _openProfile() async {
+    final result = await Navigator.push<UserProfile>(
+      context,
+      MaterialPageRoute(builder: (_) => ProfileScreen(userId: widget.userId)),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _userName = result.fullName.isNotEmpty ? result.fullName : _userName;
+      _userEmail = result.mail;
+    });
+  }
+
+  Future<void> _confirmDeleteMedication(TodayMedicationItem item) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('İlacı Çıkart'),
+        content: Text('${item.ilacAdi} ilacını çıkartmak istediğinize emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Vazgeç')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
+            child: const Text('Evet', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+
+    if (result != true) return;
+
+    final ok = await _medicationCreateService.deleteMedication(userId: widget.userId, ilacId: item.ilacId);
+    if (!mounted) return;
+
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('İlaç çıkarılamadı'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _todayMedications = _todayMedications.where((m) => m.ilacId != item.ilacId).toList();
+      for (final time in _usageTimes(item)) {
+        _takenState.remove(_usageKey(item, time));
+      }
+    });
+    await _saveTakenStateToStorage();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('İlaç listeden çıkarıldı'),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _formatDrugTitle(String ilacAdi, String bitisTarihi, String sureSiniri) {
+    if (bitisTarihi != '-') return ilacAdi;
+    if (sureSiniri.isEmpty) return ilacAdi;
+    return '$ilacAdi ($sureSiniri)';
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE3F2FD),
-            Color(0xFFF3E5F5),
-            Color(0xFFE8F5E9),
-            Colors.white,
-          ],
+          colors: [Color(0xFFE3F2FD), Color(0xFFF3E5F5), Color(0xFFE8F5E9), Colors.white],
           stops: [0.0, 0.3, 0.6, 1.0],
         ),
       ),
       child: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header (Başlık ve Profil İkonu)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: RefreshIndicator(
+          onRefresh: _loadTodayMedications,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  _buildQuickActions(context),
+                  if (_riskWarning.risk) ...[
+                    const SizedBox(height: 16),
+                    _buildRiskWarningBox(),
+                  ],
+                  const SizedBox(height: 24),
+                  const Text(
+                    'İLAÇLAR',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTodayMedicationSection(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Merhaba $_userName!',
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 4),
+            Text(_userEmail, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          ],
+        ),
+        InkWell(
+          onTap: _openProfile,
+          borderRadius: BorderRadius.circular(15),
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 28),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickActionCard(
+            context,
+            icon: Icons.add_circle,
+            title: 'İlaç Ekle',
+            color: Colors.blue,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddMedicineScreen(userId: widget.userId)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionCard(
+            context,
+            icon: Icons.qr_code_scanner,
+            title: 'QR Tara',
+            color: Colors.purple,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddMedicineScreen(userId: widget.userId, initialMethod: 'qr')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRiskWarningBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        border: Border.all(color: Colors.red.shade300, width: 1.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '!!! ${_riskWarning.message}',
+                  style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.bold, fontSize: 13, height: 1.35),
+                ),
+              ),
+            ],
+          ),
+          if (_riskWarning.matchedItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ..._riskWarning.matchedItems.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('- $item', style: TextStyle(color: Colors.red.shade700, fontSize: 12)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodayMedicationSection() {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_todayMedications.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: Text(_loadError ?? 'Bugün için ilaç kaydı bulunamadı.', style: const TextStyle(fontWeight: FontWeight.w500)),
+      );
+    }
+
+    return Column(
+      children: _todayMedications.map((item) => _buildMedicineCard(item: item)).toList(),
+    );
+  }
+
+  Widget _buildMedicineCard({required TodayMedicationItem item}) {
+    final dose = (item.ilacDozu ?? '').trim().isEmpty ? '-' : item.ilacDozu!;
+    final siklik = (item.kullanimSikligi ?? '').trim().isEmpty ? '-' : item.kullanimSikligi!;
+    final baslangic = (item.baslangicTarihi ?? '').trim().isEmpty ? '-' : item.baslangicTarihi!;
+    final bitis = (item.bitisTarihi ?? '').trim().isEmpty ? '-' : item.bitisTarihi!;
+    final sureSiniri = (item.sureSiniri ?? '').trim();
+    final ilacAdi = _formatDrugTitle(item.ilacAdi, bitis, sureSiniri);
+    final allTaken = _isAllTaken(item);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: allTaken ? Colors.green.shade50 : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  allTaken ? Icons.check_circle : Icons.access_time,
+                  color: allTaken ? Colors.green.shade600 : Colors.blue.shade600,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          'Merhaba $userName! 👋',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                        Expanded(
+                          child: Text(
+                            ilacAdi,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'İlaçlarınızı takip edin',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+                        InkWell(
+                          onTap: () => _confirmDeleteMedication(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Icon(Icons.close, size: 17, color: Colors.red.shade600),
                           ),
                         ),
                       ],
                     ),
-                    
-                    // PROFİL İKONU (Tıklanabilir yapıldı)
-                    InkWell(
-                      onTap: () => _showProfileDialog(context),
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.blue.shade500, Colors.purple.shade600],
-                          ),
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.person, color: Colors.white, size: 28),
+                    const SizedBox(height: 6),
+                    Text('Doz: $dose  |  Sıklık: $siklik', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Text(
+                        'Başlangıç Tarihi: $baslangic',
+                        style: TextStyle(fontSize: 12, color: Colors.orange.shade900, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.deepOrange.shade200),
+                      ),
+                      child: Text(
+                        'Bitiş Tarihi: $bitis',
+                        style: TextStyle(fontSize: 12, color: Colors.deepOrange.shade900, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Hızlı İşlemler
-                Row(
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Column(
+            children: _usageTimes(item).map((time) {
+              final taken = _takenState[_usageKey(item, time)] ?? false;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
                   children: [
                     Expanded(
-                      child: _buildQuickActionCard(
-                        context,
-                        icon: Icons.add_circle,
-                        title: 'İlaç Ekle',
-                        color: Colors.blue,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddMedicineScreen(),
-                            ),
-                          );
-                        },
+                      child: Text(
+                        'Kullanım Saati: $time',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildQuickActionCard(
-                        context,
-                        icon: Icons.qr_code_scanner,
-                        title: 'QR Tara',
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddMedicineScreen(initialMethod: 'qr'),
-                            ),
-                          );
-                        },
+                    InkWell(
+                      onTap: () => _toggleTaken(item, time),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: taken ? Colors.green.shade100 : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: taken ? Colors.green.shade300 : Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          taken ? 'Aldım ✓' : 'Aldım',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: taken ? Colors.green.shade900 : Colors.grey.shade700,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Bugünkü İlaçlar Listesi
-                const Text(
-                  'BUGÜNKÜ İLAÇLAR',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                _buildMedicineCard(
-                  name: 'Parol 500mg',
-                  time: '08:00',
-                  dosage: '1 tablet',
-                  taken: false,
-                ),
-                _buildMedicineCard(
-                  name: 'Vitamin D',
-                  time: '12:00',
-                  dosage: '1 kapsül',
-                  taken: true,
-                ),
-                _buildMedicineCard(
-                  name: 'Aspirin',
-                  time: '20:00',
-                  dosage: '1 tablet',
-                  taken: false,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Haftalık İstatistik Kartı
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade500, Colors.purple.shade600],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bu Hafta',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatItem('12', 'Alınan'),
-                          Container(width: 1, height: 40, color: Colors.white24),
-                          _buildStatItem('3', 'Kaçırılan'),
-                          Container(width: 1, height: 40, color: Colors.white24),
-                          _buildStatItem('80%', 'Uyum'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            }).toList(),
           ),
-        ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DrugInformationScreen(drugId: item.ilacId, drugName: item.ilacAdi),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.blue.shade400, Colors.purple.shade500]),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(color: Colors.blue.withOpacity(0.18), blurRadius: 6, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Bilgilendirme',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -348,13 +569,7 @@ class HomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 2))],
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -362,126 +577,14 @@ class HomeScreen extends StatelessWidget {
             Container(
               width: 50,
               height: 50,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMedicineCard({
-    required String name,
-    required String time,
-    required String dosage,
-    required bool taken,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: taken ? Colors.green.shade50 : Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              taken ? Icons.check_circle : Icons.access_time,
-              color: taken ? Colors.green.shade600 : Colors.blue.shade600,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$time • $dosage',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!taken)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade500, Colors.purple.shade600],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Aldım',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
     );
   }
 }

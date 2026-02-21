@@ -1,10 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+
+import '../services/medication_create_service.dart';
 import 'qr_scanner_screen.dart';
 
 class AddMedicineScreen extends StatefulWidget {
+  final int userId;
   final String initialMethod;
-  
-  const AddMedicineScreen({Key? key, this.initialMethod = 'manual'}) : super(key: key);
+
+  const AddMedicineScreen({
+    super.key,
+    required this.userId,
+    this.initialMethod = 'manual',
+  });
 
   @override
   State<AddMedicineScreen> createState() => _AddMedicineScreenState();
@@ -13,11 +20,12 @@ class AddMedicineScreen extends StatefulWidget {
 class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final TextEditingController _medicineNameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-  
+  final MedicationCreateService _medicationCreateService = MedicationCreateService();
+
   late String selectedMethod;
   String? selectedFrequency;
-  TimeOfDay? selectedTime;
+  List<TimeOfDay?> selectedTimes = [null];
+  bool isSaving = false;
   bool allergyCheckPassed = false;
   bool isChecking = false;
 
@@ -30,34 +38,70 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     }
   }
 
-  void _selectTime() async {
+  int _requiredTimeCount(String? freq) {
+    if (freq == 'Günde 2 kez') return 2;
+    if (freq == 'Günde 3 kez') return 3;
+    return 1;
+  }
+
+  void _onFrequencyChanged(String? value) {
+    final count = _requiredTimeCount(value);
+    final List<TimeOfDay?> next = List<TimeOfDay?>.filled(count, null);
+    for (int i = 0; i < count && i < selectedTimes.length; i++) {
+      next[i] = selectedTimes[i];
+    }
+    setState(() {
+      selectedFrequency = value;
+      selectedTimes = next;
+    });
+  }
+
+  Future<void> _selectTime(int index) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: selectedTimes[index] ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.blue.shade500,
-            ),
+            colorScheme: ColorScheme.light(primary: Colors.blue.shade500),
           ),
           child: child!,
         );
       },
     );
+
     if (picked != null) {
       setState(() {
-        selectedTime = picked;
+        selectedTimes[index] = picked;
       });
     }
   }
 
+  Future<void> _scanQRCode() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => QRScannerScreen()),
+    );
+
+    if (result != null) {
+      setState(() {
+        _medicineNameController.text = result;
+        selectedMethod = 'manual';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('QR Kod okundu: $result'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   void _checkAllergy() {
-    setState(() {
-      isChecking = true;
-    });
-    
+    setState(() => isChecking = true);
     Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
       setState(() {
         isChecking = false;
         allergyCheckPassed = true;
@@ -70,9 +114,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -81,34 +123,19 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               Container(
                 width: 60,
                 height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade600,
-                  size: 32,
-                ),
+                decoration: BoxDecoration(color: Colors.green.shade100, shape: BoxShape.circle),
+                child: Icon(Icons.check_circle, color: Colors.green.shade600, size: 32),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Güvenli İlaç',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               const SizedBox(height: 8),
               Text(
-                'Bu ilaç alerjen profilinizle uyumludur. Güvenle kullanabilirsiniz.',
+                'Bu ilaç alerjen profilinizle uyumludur.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -118,16 +145,11 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade500,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text(
                     'Tamam',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -138,26 +160,80 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     );
   }
 
-  // YENİ HALİ (Kamerayı açan kod)
-  void _scanQRCode() async {
-    // Kamerayı açacak olan sayfaya git
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => QRScannerScreen()),
-    );
+  String? _formattedTimes() {
+    final filled = selectedTimes.whereType<TimeOfDay>().toList();
+    if (filled.isEmpty) return null;
+    return filled
+        .map((t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}')
+        .join(',');
+  }
 
-    // Eğer tarama yapıldıysa ve bir sonuç döndüyse
-    if (result != null) {
-      setState(() {
-        // Gelen QR kodunu ilaç adına yazalım (Örnek olarak)
-        _medicineNameController.text = result; 
-        selectedMethod = 'manual'; // Manuel forma geri dön
-      });
-      
+  Future<void> _submit() async {
+    if (isSaving) return;
+
+    if (_medicineNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('QR Kod Okundu: $result'),
-          backgroundColor: Colors.green,
+          content: const Text('İlaç adı zorunlu'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    if (selectedFrequency == null || selectedFrequency!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Kullanım sıklığı seçiniz'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    if (selectedTimes.any((t) => t == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tüm kullanım saatlerini seçiniz'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    setState(() => isSaving = true);
+    final result = await _medicationCreateService.createMedication(
+      userId: widget.userId,
+      ilacAdi: _medicineNameController.text.trim(),
+      ilacDozu: _dosageController.text.trim().isEmpty ? null : _dosageController.text.trim(),
+      kullanimSikligi: selectedFrequency,
+      hatirlatmaSaati: _formattedTimes(),
+    );
+
+    if (!mounted) return;
+    setState(() => isSaving = false);
+
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('İlaç başarıyla eklendi'),
+          backgroundColor: Colors.green.shade600,
+        ),
+      );
+      Navigator.pop(context, true);
+    } else {
+      String errorText = 'İlaç eklenemedi';
+      if (result.message == 'DRUG_NOT_FOUND') {
+        errorText = 'İlaç bulunamadı';
+      } else if (result.statusCode == 400) {
+        errorText = 'İlaç adı boş bırakılamaz veya ilaç bulunamadı';
+      } else if (result.statusCode == 0) {
+        errorText = 'Sunucuya bağlanılamadı';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorText),
+          backgroundColor: Colors.red.shade600,
         ),
       );
     }
@@ -167,15 +243,15 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFFE5E5), // Soft pembe
-              Color(0xFFFFE8CC), // Soft turuncu
-              Color(0xFFFFF4E0), // Soft sarı
-              Color(0xFFE8F8F5), // Mint yeşil
+              Color(0xFFFFE5E5),
+              Color(0xFFFFE8CC),
+              Color(0xFFFFF4E0),
+              Color(0xFFE8F8F5),
             ],
             stops: [0.0, 0.35, 0.65, 1.0],
           ),
@@ -183,7 +259,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(16),
@@ -207,33 +282,23 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       children: [
                         Text(
                           'İlaç Ekle',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                         ),
                         Text(
                           'Yeni ilaç kaydı oluştur',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-
-              // Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Method Selection
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -255,9 +320,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                 label: 'QR Kod',
                                 isSelected: selectedMethod == 'qr',
                                 onTap: () {
-                                  setState(() {
-                                    selectedMethod = 'qr';
-                                  });
+                                  setState(() => selectedMethod = 'qr');
                                   _scanQRCode();
                                 },
                               ),
@@ -267,32 +330,18 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                 icon: Icons.edit,
                                 label: 'Manuel',
                                 isSelected: selectedMethod == 'manual',
-                                onTap: () {
-                                  setState(() {
-                                    selectedMethod = 'manual';
-                                  });
-                                },
+                                onTap: () => setState(() => selectedMethod = 'manual'),
                               ),
                             ),
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Form Fields
                       const Text(
                         'İLAÇ BİLGİLERİ',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 1.2,
-                        ),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
                       ),
                       const SizedBox(height: 12),
-
-                      // Medicine Name
                       _buildTextField(
                         controller: _medicineNameController,
                         label: 'İlaç Adı',
@@ -300,8 +349,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                         icon: Icons.medication,
                       ),
                       const SizedBox(height: 16),
-
-                      // Dosage
                       _buildTextField(
                         controller: _dosageController,
                         label: 'Doz',
@@ -309,8 +356,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                         icon: Icons.medical_services,
                       ),
                       const SizedBox(height: 16),
-
-                      // Frequency
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -327,114 +372,77 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                           value: selectedFrequency,
                           decoration: InputDecoration(
                             labelText: 'Kullanım Sıklığı',
-                            prefixIcon: Icon(
-                              Icons.access_time,
-                              color: Colors.blue.shade500,
-                            ),
+                            prefixIcon: Icon(Icons.access_time, color: Colors.blue.shade500),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Günde 1', child: Text('Günde 1 kez')),
-                            DropdownMenuItem(value: 'Günde 2', child: Text('Günde 2 kez')),
-                            DropdownMenuItem(value: 'Günde 3', child: Text('Günde 3 kez')),
-                            DropdownMenuItem(value: 'Haftada 1', child: Text('Haftada 1 kez')),
+                            DropdownMenuItem(value: 'Günde 1 kez', child: Text('Günde 1 kez')),
+                            DropdownMenuItem(value: 'Günde 2 kez', child: Text('Günde 2 kez')),
+                            DropdownMenuItem(value: 'Günde 3 kez', child: Text('Günde 3 kez')),
                           ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedFrequency = value;
-                            });
-                          },
+                          onChanged: _onFrequencyChanged,
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Time Picker
-                      InkWell(
-                        onTap: _selectTime,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
+                      ...List.generate(selectedTimes.length, (index) {
+                        final time = selectedTimes[index];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: index == selectedTimes.length - 1 ? 0 : 10),
+                          child: InkWell(
+                            onTap: () => _selectTime(index),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                color: Colors.blue.shade500,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Hatırlatma Saati',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.schedule, color: Colors.blue.shade500),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${index + 1}. kullanım saati',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          time != null
+                                              ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+                                              : 'Saat seçin',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      selectedTime != null
-                                          ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
-                                          : 'Saat seçin',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                                ],
                               ),
-                              Icon(
-                                Icons.chevron_right,
-                                color: Colors.grey.shade400,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Notes
-                      _buildTextField(
-                        controller: _notesController,
-                        label: 'Notlar (Opsiyonel)',
-                        hint: 'Kullanım talimatları veya notlar',
-                        icon: Icons.note,
-                        maxLines: 3,
-                      ),
-
+                        );
+                      }),
                       const SizedBox(height: 24),
-
-                      // Allergy Check Button
-                      if (_medicineNameController.text.isNotEmpty)
+                      if (_medicineNameController.text.trim().isNotEmpty)
                         Container(
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.orange.shade400,
-                                Colors.red.shade400,
-                              ],
-                            ),
+                            gradient: LinearGradient(colors: [Colors.orange.shade400, Colors.red.shade400]),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -462,16 +470,10 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                       ),
                                       child: isChecking
                                           ? const Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 2,
-                                              ),
+                                              padding: EdgeInsets.all(8),
+                                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                             )
-                                          : const Icon(
-                                              Icons.shield_outlined,
-                                              color: Colors.white,
-                                            ),
+                                          : const Icon(Icons.shield_outlined, color: Colors.white),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -490,31 +492,21 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                             isChecking
                                                 ? 'Kontrol ediliyor...'
                                                 : allergyCheckPassed
-                                                    ? '✓ Güvenli'
+                                                    ? 'Güvenli'
                                                     : 'İlacı kontrol et',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                            ),
+                                            style: const TextStyle(color: Colors.white, fontSize: 12),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    if (allergyCheckPassed)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
+                                    if (allergyCheckPassed) const Icon(Icons.check_circle, color: Colors.white),
                                   ],
                                 ),
                               ),
                             ),
                           ),
                         ),
-
                       const SizedBox(height: 16),
-
-                      // Info Box
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
@@ -525,32 +517,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: Colors.blue.shade600,
-                              size: 20,
-                            ),
+                            Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'İlaç eklemeden önce alerji kontrolü yapmanızı öneririz. Bu işlem alerjen profilinizle otomatik karşılaştırma yapar.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.blue.shade800,
-                                  height: 1.5,
-                                ),
+                                'İlaç eklemeden önce alerji kontrolü yapmanızı öneririz.',
+                                style: TextStyle(fontSize: 13, color: Colors.blue.shade800, height: 1.5),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 80), // Bottom button için boşluk
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
               ),
-
-              // Bottom Button
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -567,35 +549,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // İlaç ekleme işlemi
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('İlaç başarıyla eklendi!'),
-                          backgroundColor: Colors.green.shade600,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                      Navigator.pop(context);
-                    },
+                    onPressed: isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade500,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'İlaç Ekle',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'İlaç Ekle',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                   ),
                 ),
               ),
@@ -618,22 +587,14 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  colors: [Colors.blue.shade500, Colors.purple.shade600],
-                )
-              : null,
+          gradient: isSelected ? LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]) : null,
           color: isSelected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey.shade600,
-              size: 20,
-            ),
+            Icon(icon, color: isSelected ? Colors.white : Colors.grey.shade600, size: 20),
             const SizedBox(width: 8),
             Text(
               label,
@@ -671,6 +632,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -681,14 +643,8 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-        onChanged: (value) {
-          setState(() {}); // Alerji kontrol butonunu göstermek için
-        },
       ),
     );
   }
@@ -697,7 +653,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   void dispose() {
     _medicineNameController.dispose();
     _dosageController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 }

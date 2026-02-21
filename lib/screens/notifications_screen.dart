@@ -1,80 +1,210 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/notification_item.dart';
+import '../services/allergen_service.dart';
+import '../services/notification_settings_service.dart';
+import '../services/risk_warning_service.dart';
+import '../services/today_medications_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  final int userId;
+
+  const NotificationsScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  String selectedFilter = 'Tümü'; // Tümü, İlaç, Alerji, Sistem
+  final TodayMedicationsService _todayMedicationsService = TodayMedicationsService();
+  final RiskWarningService _riskWarningService = RiskWarningService();
+  final AllergenService _allergenService = AllergenService();
+  final NotificationSettingsService _settingsService = NotificationSettingsService();
 
-  final List<NotificationItem> allNotifications = [
-    NotificationItem(
-      id: 1,
-      type: 'alerji',
-      title: 'Alerji Uyarısı!',
-      message: 'Eklediğiniz "Aspirin 100mg" ilacı alerjen profilinizle uyumsuz. Lütfen kontrol edin.',
-      time: '5 dk önce',
-      isRead: false,
-      priority: 'high',
-    ),
-    NotificationItem(
-      id: 2,
-      type: 'ilac',
-      title: 'İlaç Hatırlatması',
-      message: 'Parol 500mg almanız gereken saat yaklaşıyor. 15 dakika kaldı.',
-      time: '15 dk önce',
-      isRead: false,
-      priority: 'medium',
-    ),
-    NotificationItem(
-      id: 3,
-      type: 'ilac',
-      title: 'İlaç Alındı',
-      message: 'Vitamin D kapsülünüzü aldığınızı kaydettiniz.',
-      time: '2 saat önce',
-      isRead: true,
-      priority: 'low',
-    ),
-    NotificationItem(
-      id: 4,
-      type: 'sistem',
-      title: 'Haftalık Özet',
-      message: 'Bu hafta %85 uyum oranına ulaştınız. Harika gidiyorsunuz!',
-      time: '1 gün önce',
-      isRead: true,
-      priority: 'low',
-    ),
-    NotificationItem(
-      id: 5,
-      type: 'alerji',
-      title: 'Alerjen Güncelleme',
-      message: 'Alerjen profilinize "Penisilin" eklendi. Sistem tarafından kontrol ediliyor.',
-      time: '2 gün önce',
-      isRead: true,
-      priority: 'medium',
-    ),
-    NotificationItem(
-      id: 6,
-      type: 'ilac',
-      title: 'Kaçırılan İlaç',
-      message: 'Aspirin 100mg dozunu kaçırdınız. Lütfen doktorunuza danışın.',
-      time: '3 gün önce',
-      isRead: true,
-      priority: 'high',
-    ),
-  ];
+  String selectedFilter = 'Tümü';
+  bool _isLoading = true;
+  List<NotificationItem> allNotifications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final meds = await _todayMedicationsService.fetchTodayMedications(widget.userId);
+      final warning = await _riskWarningService.getRiskWarning(widget.userId);
+      final allergens = await _allergenService.getAllergens(widget.userId);
+      final reminderBefore = await _settingsService.getReminderBeforeMinutes(widget.userId);
+      final takenSet = await _loadTakenSet();
+
+      int idCounter = 1;
+      final List<NotificationItem> generated = [];
+      final now = DateTime.now();
+
+      for (final item in meds) {
+        final times = _timesOf(item.hatirlatmaSaati);
+        for (final time in times) {
+          final key = '${item.ilacId}_$time';
+          final isTaken = takenSet.contains(key);
+          final scheduled = _parseTodayTime(time);
+
+          if (isTaken) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç alındı',
+                message: '${item.ilacAdi} ilacı ($time) alındı olarak işaretlendi.',
+                time: 'Bugün $time',
+                isRead: true,
+                priority: 'low',
+              ),
+            );
+            continue;
+          }
+
+          if (scheduled == null) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç hatırlatması',
+                message: '${item.ilacAdi} ilacının saati okunamadı.',
+                time: time,
+                isRead: false,
+                priority: 'medium',
+              ),
+            );
+            continue;
+          }
+
+          final diff = scheduled.difference(now).inMinutes;
+
+          if (diff < 0) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç saati geçti',
+                message: '${item.ilacAdi} ilacı ($time) için ${diff.abs()} dakika gecikme var.',
+                time: 'Bugün $time',
+                isRead: false,
+                priority: 'high',
+              ),
+            );
+          } else if (diff <= reminderBefore) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç hatırlatması',
+                message: '${item.ilacAdi} ilacını ($time) kullanmana $diff dakika kaldı.',
+                time: 'Bugün $time',
+                isRead: false,
+                priority: diff <= 5 ? 'high' : 'medium',
+              ),
+            );
+          } else {
+            final untilReminder = diff - reminderBefore;
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'Planlı ilaç bildirimi',
+                message:
+                    '${item.ilacAdi} ilacı ($time) için bildirim $untilReminder dakika sonra gönderilecek (ilaç saatine $diff dakika var).',
+                time: 'Bugün $time',
+                isRead: true,
+                priority: 'low',
+              ),
+            );
+          }
+        }
+      }
+
+      if (allergens.isNotEmpty) {
+        generated.add(
+          NotificationItem(
+            id: idCounter++,
+            type: 'alerji',
+            title: 'Alerjen profili güncel',
+            message: 'Kayıtlı alerjenler: ${allergens.join(', ')}',
+            time: 'Bugün',
+            isRead: false,
+            priority: 'medium',
+          ),
+        );
+      }
+
+      if (warning.risk) {
+        final details = warning.matchedItems.isEmpty ? '' : ' Eslesenler: ${warning.matchedItems.join(', ')}';
+        generated.add(
+          NotificationItem(
+            id: idCounter++,
+            type: 'alerji',
+            title: 'Alerji uyarısı',
+            message: '${warning.message}$details',
+            time: 'Bugün',
+            isRead: false,
+            priority: 'high',
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => allNotifications = generated);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<Set<String>> _loadTakenSet() async {
+    final now = DateTime.now();
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    final dateKey = '${now.year}-$mm-$dd';
+    final storageKey = 'taken_${widget.userId}_$dateKey';
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(storageKey);
+      if (raw == null || raw.isEmpty) return {};
+      return (jsonDecode(raw) as List<dynamic>).cast<String>().toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  DateTime? _parseTodayTime(String value) {
+    final parts = value.split(':');
+    if (parts.length < 2) return null;
+
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, hour, minute);
+  }
+
+  List<String> _timesOf(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty || value == '-') return const ['-'];
+    return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
 
   List<NotificationItem> get filteredNotifications {
     if (selectedFilter == 'Tümü') return allNotifications;
-    
-    String filterType = selectedFilter == 'İlaç' ? 'ilac' 
-                      : selectedFilter == 'Alerji' ? 'alerji'
-                      : 'sistem';
-    
+    final filterType = selectedFilter == 'İlaç' ? 'ilac' : 'alerji';
     return allNotifications.where((n) => n.type == filterType).toList();
   }
 
@@ -88,20 +218,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _markAllAsRead() {
     setState(() {
-      for (var notification in allNotifications) {
+      for (final notification in allNotifications) {
         notification.isRead = true;
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Tüm bildirimler okundu olarak işaretlendi'),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
   }
 
   void _deleteNotification(int id) {
@@ -113,7 +233,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -129,7 +249,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            // Header
             Container(
               color: Colors.white,
               padding: const EdgeInsets.all(16),
@@ -143,73 +262,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         children: [
                           const Text(
                             'Bildirimler',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '$unreadCount okunmamış bildirim',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
+                            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
-                      if (unreadCount > 0)
-                        InkWell(
-                          onTap: _markAllAsRead,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.blue.shade500, Colors.purple.shade600],
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: _loadNotifications,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Tümü Okundu',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              child: const Icon(Icons.refresh, size: 16),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          if (unreadCount > 0)
+                            InkWell(
+                              onTap: _markAllAsRead,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Tümü Okundu',
+                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Filter Tabs
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: ['Tümü', 'İlaç', 'Alerji', 'Sistem'].map((filter) {
-                        bool isSelected = selectedFilter == filter;
+                      children: ['Tümü', 'İlaç', 'Alerji'].map((filter) {
+                        final isSelected = selectedFilter == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                selectedFilter = filter;
-                              });
-                            },
+                            onTap: () => setState(() => selectedFilter = filter),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 10,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                               decoration: BoxDecoration(
                                 gradient: isSelected
-                                    ? LinearGradient(
-                                        colors: [Colors.blue.shade500, Colors.purple.shade600],
-                                      )
+                                    ? LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600])
                                     : null,
                                 color: isSelected ? null : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(20),
@@ -231,47 +340,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ],
               ),
             ),
-
-            // Notifications List
             Expanded(
-              child: filteredNotifications.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.notifications_off_outlined,
-                            size: 80,
-                            color: Colors.grey.shade400,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredNotifications.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.shade400),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Bildirim Yok',
+                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Bildirim Yok',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Henüz bildiriminiz bulunmuyor',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredNotifications.length,
-                      itemBuilder: (context, index) {
-                        final notification = filteredNotifications[index];
-                        return _buildNotificationCard(notification);
-                      },
-                    ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredNotifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = filteredNotifications[index];
+                            return _buildNotificationCard(notification);
+                          },
+                        ),
             ),
           ],
         ),
@@ -286,8 +379,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return Colors.red.shade500;
         case 'ilac':
           return Colors.blue.shade500;
-        case 'sistem':
-          return Colors.purple.shade500;
         default:
           return Colors.grey.shade500;
       }
@@ -299,8 +390,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return Icons.warning_amber_rounded;
         case 'ilac':
           return Icons.medication;
-        case 'sistem':
-          return Icons.info;
         default:
           return Icons.notifications;
       }
@@ -309,28 +398,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Dismissible(
       key: Key(notification.id.toString()),
       direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        _deleteNotification(notification.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Bildirim silindi'),
-            action: SnackBarAction(
-              label: 'Geri Al',
-              onPressed: () {
-                setState(() {
-                  // Geri alma işlemi
-                });
-              },
-            ),
-          ),
-        );
-      },
+      onDismissed: (_) => _deleteNotification(notification.id),
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.red.shade400,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(16)),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white, size: 28),
@@ -346,15 +417,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           decoration: BoxDecoration(
             color: notification.isRead ? Colors.white : Colors.blue.shade50,
             borderRadius: BorderRadius.circular(16),
-            border: notification.isRead 
-                ? null 
-                : Border.all(color: Colors.blue.shade200, width: 2),
+            border: notification.isRead ? null : Border.all(color: Colors.blue.shade200, width: 2),
             boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
+              BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2)),
             ],
           ),
           child: Padding(
@@ -362,7 +427,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon
                 Container(
                   width: 48,
                   height: 48,
@@ -370,14 +434,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     color: getTypeColor().withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    getTypeIcon(),
-                    color: getTypeColor(),
-                    size: 24,
-                  ),
+                  child: Icon(getTypeIcon(), color: getTypeColor(), size: 24),
                 ),
                 const SizedBox(width: 12),
-                // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,67 +446,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Expanded(
                             child: Text(
                               notification.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
                             ),
                           ),
                           if (!notification.isRead)
                             Container(
                               width: 10,
                               height: 10,
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade600,
-                                shape: BoxShape.circle,
-                              ),
+                              decoration: BoxDecoration(color: Colors.blue.shade600, shape: BoxShape.circle),
                             ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         notification.message,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                          height: 1.4,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.4),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: Colors.grey.shade500,
-                          ),
+                          Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
                           const SizedBox(width: 4),
-                          Text(
-                            notification.time,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
+                          Text(notification.time, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                           const Spacer(),
                           if (notification.priority == 'high')
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(8)),
                               child: Text(
                                 'Acil',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.red.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(fontSize: 10, color: Colors.red.shade700, fontWeight: FontWeight.bold),
                               ),
                             ),
                         ],

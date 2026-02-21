@@ -1,26 +1,28 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+
 import 'reminder_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  final int userId;
+
+  const SettingsScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Varsayılan seçili dil
   String _selectedLanguage = 'Türkçe';
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFE0F7FA), // Turkuaz tonları (Giriş ekranıyla uyumlu)
+            Color(0xFFE0F7FA),
             Color(0xFFB2EBF2),
             Color(0xFF80DEEA),
             Colors.white,
@@ -39,44 +41,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               const SizedBox(height: 24),
-              
-              // 1. Bildirimler
               _buildSettingsCard(
-                icon: Icons.notifications_outlined, 
-                title: 'Bildirimler', 
-                subtitle: 'Hatırlatma ayarları', 
+                icon: Icons.notifications_outlined,
+                title: 'Bildirimler',
+                subtitle: 'Hatırlatma ayarları',
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ReminderSettingsScreen(),
+                      builder: (context) => ReminderSettingsScreen(userId: widget.userId),
                     ),
                   );
                 },
               ),
-
-              // 2. Dil Seçeneği (Seçilen dili gösteriyor)
               _buildSettingsCard(
-                icon: Icons.language_outlined, 
-                title: 'Dil', 
-                subtitle: _selectedLanguage, // Seçili dil burada yazar
-                onTap: () => _showLanguageDialog(),
+                icon: Icons.language_outlined,
+                title: 'Dil',
+                subtitle: _selectedLanguage,
+                onTap: _showLanguageDialog,
               ),
-
-              // 3. Yardım & Destek (Formlu Yapı)
               _buildSettingsCard(
-                icon: Icons.help_outline, 
-                title: 'Yardım & Destek', 
-                subtitle: 'Bize ulaşın', 
-                onTap: () => _showSupportDialog(),
+                icon: Icons.help_outline,
+                title: 'Yardım ve Destek',
+                subtitle: 'Bize ulaşın',
+                onTap: _showSupportDialog,
               ),
-
-              // 4. Uygulama Hakkında
               _buildSettingsCard(
-                icon: Icons.info_outline, 
-                title: 'Uygulama Hakkında', 
-                subtitle: 'Versiyon 1.0.0', 
-                onTap: () => _showAboutDialog(),
+                icon: Icons.info_outline,
+                title: 'Uygulama Hakkında',
+                subtitle: 'Versiyon 1.0.0',
+                onTap: _showAboutDialog,
               ),
             ],
           ),
@@ -85,7 +79,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- DİL SEÇİM PENCERESİ ---
   void _showLanguageDialog() {
     showDialog(
       context: context,
@@ -93,28 +86,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Dil Seçin'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         children: [
-          _buildLanguageOption('Türkçe', '🇹🇷'),
-          _buildLanguageOption('English', '🇺🇸'),
-          _buildLanguageOption('Deutsch', '🇩🇪'),
+          _buildLanguageOption('Türkçe', 'TR'),
+          _buildLanguageOption('English', 'EN'),
+          _buildLanguageOption('Deutsch', 'DE'),
         ],
       ),
     );
   }
 
   Widget _buildLanguageOption(String language, String flag) {
-    bool isSelected = _selectedLanguage == language;
+    final isSelected = _selectedLanguage == language;
     return SimpleDialogOption(
       onPressed: () {
-        setState(() {
-          _selectedLanguage = language;
-        });
+        setState(() => _selectedLanguage = language);
         Navigator.pop(context);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
           children: [
-            Text(flag, style: const TextStyle(fontSize: 24)),
+            Text(flag, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(width: 12),
             Text(
               language,
@@ -132,18 +123,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- YARDIM & DESTEK PENCERESİ (FORM İÇEREN) ---
   void _showSupportDialog() {
-    final TextEditingController _messageController = TextEditingController();
+    final messageController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Klavye açılınca yukarı kayması için
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => Padding(
-        // Klavye boşluğu için padding
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
           left: 24,
@@ -169,8 +158,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 16),
-            
-            // E-posta Adresi Gösterimi
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -178,11 +165,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blue.shade100),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.email_outlined, color: Colors.blue, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  Icon(Icons.email_outlined, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Text(
                       'yardimdestek42@gmail.com',
                       style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
@@ -191,12 +178,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            
             const SizedBox(height: 20),
-            
-            // Mesaj Yazma Alanı
             TextField(
-              controller: _messageController,
+              controller: messageController,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: 'Mesajınız buraya...',
@@ -205,16 +189,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fillColor: Colors.grey.shade50,
               ),
             ),
-            
             const SizedBox(height: 24),
-            
-            // Gönder Butonu
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  // Burada ileride mail gönderme işlemi yapılacak
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -238,7 +218,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- HAKKINDA PENCERESİ ---
   void _showAboutDialog() {
     showAboutDialog(
       context: context,
@@ -252,23 +231,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: const Icon(Icons.medical_services, size: 40, color: Colors.blue),
       ),
-      children: [
-        const SizedBox(height: 16),
-        const Text(
-          'Bu uygulama, günlük ilaç takibinizi kolaylaştırmak, unutkanlığı önlemek ve alerjen kontrolü sağlayarak güvenli ilaç kullanımını desteklemek amacıyla geliştirilmiştir.',
+      children: const [
+        SizedBox(height: 16),
+        Text(
+          'Bu uygulama, günlük ilaç takibini kolaylaştırmak, unutkanlığı önlemek ve alerjen kontrolü sağlayarak güvenli ilaç kullanımını desteklemek amacıyla geliştirilmiştir.',
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'Özellikler:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text('• QR Kod ile hızlı ilaç ekleme'),
-        const Text('• Alerjen kontrol sistemi'),
-        const Text('• Düzenli hatırlatmalar'),
-        const SizedBox(height: 24),
-        const Text(
+        SizedBox(height: 16),
+        Text('Özellikler:', style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 8),
+        Text('• QR Kod ile hızlı ilaç ekleme'),
+        Text('• Alerjen kontrol sistemi'),
+        Text('• Düzenli hatırlatmalar'),
+        SizedBox(height: 24),
+        Text(
           '© 2026 İlaç Takip Uygulaması\nTüm Hakları Saklıdır.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
@@ -276,7 +252,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _buildSettingsCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
