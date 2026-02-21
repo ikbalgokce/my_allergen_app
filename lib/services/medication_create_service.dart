@@ -2,10 +2,22 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+class MedicationCreateResult {
+  final bool success;
+  final int statusCode;
+  final String? message;
+
+  const MedicationCreateResult({
+    required this.success,
+    required this.statusCode,
+    this.message,
+  });
+}
+
 class MedicationCreateService {
   static const String _baseUrl = 'http://10.0.2.2:8080';
 
-  Future<bool> createMedication({
+  Future<MedicationCreateResult> createMedication({
     required int userId,
     required String ilacAdi,
     required String? ilacDozu,
@@ -23,9 +35,24 @@ class MedicationCreateService {
           'hatirlatmaSaati': hatirlatmaSaati,
         }),
       );
-      return response.statusCode == 201;
+
+      String? message;
+      if (response.body.isNotEmpty) {
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          message = json['message'] as String?;
+        } catch (_) {
+          message = null;
+        }
+      }
+
+      return MedicationCreateResult(
+        success: response.statusCode == 201,
+        statusCode: response.statusCode,
+        message: message,
+      );
     } catch (_) {
-      return false;
+      return const MedicationCreateResult(success: false, statusCode: 0, message: 'NETWORK_ERROR');
     }
   }
 

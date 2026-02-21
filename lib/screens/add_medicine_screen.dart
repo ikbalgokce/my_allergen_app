@@ -202,7 +202,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     }
 
     setState(() => isSaving = true);
-    final ok = await _medicationCreateService.createMedication(
+    final result = await _medicationCreateService.createMedication(
       userId: widget.userId,
       ilacAdi: _medicineNameController.text.trim(),
       ilacDozu: _dosageController.text.trim().isEmpty ? null : _dosageController.text.trim(),
@@ -213,7 +213,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     if (!mounted) return;
     setState(() => isSaving = false);
 
-    if (ok) {
+    if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('İlaç başarıyla eklendi'),
@@ -222,9 +222,17 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       );
       Navigator.pop(context, true);
     } else {
+      String errorText = 'İlaç eklenemedi';
+      if (result.message == 'DRUG_NOT_FOUND') {
+        errorText = 'İlaç bulunamadı';
+      } else if (result.statusCode == 400) {
+        errorText = 'İlaç adı boş bırakılamaz veya ilaç bulunamadı';
+      } else if (result.statusCode == 0) {
+        errorText = 'Sunucuya bağlanılamadı';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('İlaç eklenemedi'),
+          content: Text(errorText),
           backgroundColor: Colors.red.shade600,
         ),
       );

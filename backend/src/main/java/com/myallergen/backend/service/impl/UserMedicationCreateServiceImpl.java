@@ -52,12 +52,7 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
 
         String ilacAdi = request.ilacAdi().trim();
         Drug savedDrug = drugRepository.findFirstByIlacAdiIgnoreCase(ilacAdi)
-                .orElseGet(() -> {
-                    Drug newDrug = new Drug();
-                    newDrug.setIlacAdi(ilacAdi);
-                    newDrug.setKullanimSikligi(request.kullanimSikligi());
-                    return drugRepository.save(newDrug);
-                });
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "DRUG_NOT_FOUND"));
 
         String hatirlatma = normalizeReminderTimes(request.hatirlatmaSaati());
         LocalDate baslangicTarihi = LocalDate.now();

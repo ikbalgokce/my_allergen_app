@@ -49,12 +49,30 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     );
     if (!mounted || newName == null || newName.trim().isEmpty) return;
 
-    final updated = await _allergenService.addAllergen(
-      userId: widget.userId,
-      allergenName: newName.trim(),
-    );
-    if (!mounted) return;
-    setState(() => _allergens = updated);
+    try {
+      final updated = await _allergenService.addAllergen(
+        userId: widget.userId,
+        allergenName: newName.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _allergens = updated);
+    } catch (e) {
+      if (!mounted) return;
+      String message = 'Alerjen eklenemedi';
+      final raw = e.toString();
+      if (raw.contains('ALLERGEN_NOT_FOUND')) {
+        message = 'Alerjen bulunamadı';
+      } else if (raw.contains('ALLERGEN_NAME_REQUIRED')) {
+        message = 'Alerjen adı boş bırakılamaz';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override

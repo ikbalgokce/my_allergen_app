@@ -51,7 +51,18 @@ class AllergenService {
       body: jsonEncode({'name': allergenName}),
     );
 
-    if (response.statusCode != 200) return const [];
+    if (response.statusCode != 200) {
+      String? message;
+      if (response.body.isNotEmpty) {
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          message = json['message'] as String?;
+        } catch (_) {
+          message = null;
+        }
+      }
+      throw Exception(message ?? 'ALLERGEN_ADD_FAILED');
+    }
     final body = response.body.trim();
     if (body.isEmpty) return const [];
 

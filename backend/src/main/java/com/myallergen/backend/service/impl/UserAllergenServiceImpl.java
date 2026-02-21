@@ -1,6 +1,7 @@
 package com.myallergen.backend.service.impl;
 
 import com.myallergen.backend.entity.User;
+import com.myallergen.backend.repository.DrugRepository;
 import com.myallergen.backend.repository.UserRepository;
 import com.myallergen.backend.service.UserAllergenService;
 import org.springframework.http.HttpStatus;
@@ -14,9 +15,11 @@ import java.util.List;
 public class UserAllergenServiceImpl implements UserAllergenService {
 
     private final UserRepository userRepository;
+    private final DrugRepository drugRepository;
 
-    public UserAllergenServiceImpl(UserRepository userRepository) {
+    public UserAllergenServiceImpl(UserRepository userRepository, DrugRepository drugRepository) {
         this.userRepository = userRepository;
+        this.drugRepository = drugRepository;
     }
 
     @Override
@@ -32,7 +35,12 @@ public class UserAllergenServiceImpl implements UserAllergenService {
 
         String normalized = allergenName == null ? "" : allergenName.trim();
         if (normalized.isEmpty()) {
-            return current;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ALLERGEN_NAME_REQUIRED");
+        }
+
+        boolean validAllergen = drugRepository.existsByIlacAdiOrEtkinMaddeContains(normalized);
+        if (!validAllergen) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ALLERGEN_NOT_FOUND");
         }
 
         boolean exists = current.stream().anyMatch(item -> item.equalsIgnoreCase(normalized));
