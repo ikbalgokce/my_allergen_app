@@ -16,7 +16,7 @@ public interface UserMedicationRepository extends JpaRepository<UserMedication, 
                     + "COALESCE(i.ilac_adi, 'Bilinmeyen Ilac') AS ilacAdi, "
                     + "ui.ilac_dozu AS ilacDozu, "
                     + "ui.kullanim_sikligi AS kullanimSikligi, "
-                    + "CONVERT(VARCHAR(5), ui.hatirlatma_saati, 108) AS hatirlatmaSaati, "
+                    + "ui.hatirlatma_saati AS hatirlatmaSaati, "
                     + "CONVERT(VARCHAR(10), ui.baslangic_tarihi, 23) AS baslangicTarihi, "
                     + "CONVERT(VARCHAR(10), ui.bitis_tarihi, 23) AS bitisTarihi, "
                     + "i.sure_siniri AS sureSiniri "

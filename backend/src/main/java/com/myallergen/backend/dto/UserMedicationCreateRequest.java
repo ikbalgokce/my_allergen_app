@@ -7,6 +7,6 @@ public record UserMedicationCreateRequest(
         @NotBlank @Size(max = 150) String ilacAdi,
         @Size(max = 50) String ilacDozu,
         @Size(max = 100) String kullanimSikligi,
-        @Size(max = 5) String hatirlatmaSaati
+        @Size(max = 100) String hatirlatmaSaati
 ) {
 }

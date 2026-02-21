@@ -49,80 +49,83 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final now = DateTime.now();
 
       for (final item in meds) {
-        final key = '${item.ilacId}_${item.hatirlatmaSaati}';
-        final isTaken = takenSet.contains(key);
-        final scheduled = _parseTodayTime(item.hatirlatmaSaati);
+        final times = _timesOf(item.hatirlatmaSaati);
+        for (final time in times) {
+          final key = '${item.ilacId}_$time';
+          final isTaken = takenSet.contains(key);
+          final scheduled = _parseTodayTime(time);
 
-        if (isTaken) {
-          generated.add(
-            NotificationItem(
-              id: idCounter++,
-              type: 'ilac',
-              title: 'İlaç alındı',
-              message: '${item.ilacAdi} ilacı alındı olarak işaretlendi.',
-              time: 'Bugün ${item.hatirlatmaSaati}',
-              isRead: true,
-              priority: 'low',
-            ),
-          );
-          continue;
-        }
+          if (isTaken) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç alındı',
+                message: '${item.ilacAdi} ilacı ($time) alındı olarak işaretlendi.',
+                time: 'Bugün $time',
+                isRead: true,
+                priority: 'low',
+              ),
+            );
+            continue;
+          }
 
-        if (scheduled == null) {
-          generated.add(
-            NotificationItem(
-              id: idCounter++,
-              type: 'ilac',
-              title: 'İlaç hatırlatması',
-              message: '${item.ilacAdi} ilacının saati okunamadı.',
-              time: item.hatirlatmaSaati,
-              isRead: false,
-              priority: 'medium',
-            ),
-          );
-          continue;
-        }
+          if (scheduled == null) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç hatırlatması',
+                message: '${item.ilacAdi} ilacının saati okunamadı.',
+                time: time,
+                isRead: false,
+                priority: 'medium',
+              ),
+            );
+            continue;
+          }
 
-        final diff = scheduled.difference(now).inMinutes;
+          final diff = scheduled.difference(now).inMinutes;
 
-        if (diff < 0) {
-          generated.add(
-            NotificationItem(
-              id: idCounter++,
-              type: 'ilac',
-              title: 'İlaç saati geçti',
-              message: '${item.ilacAdi} ilacı için ${diff.abs()} dakika gecikme var.',
-              time: 'Bugün ${item.hatirlatmaSaati}',
-              isRead: false,
-              priority: 'high',
-            ),
-          );
-        } else if (diff <= reminderBefore) {
-          generated.add(
-            NotificationItem(
-              id: idCounter++,
-              type: 'ilac',
-              title: 'İlaç hatırlatması',
-              message: '${item.ilacAdi} ilacını kullanmana $diff dakika kaldı.',
-              time: 'Bugün ${item.hatirlatmaSaati}',
-              isRead: false,
-              priority: diff <= 5 ? 'high' : 'medium',
-            ),
-          );
-        } else {
-          final untilReminder = diff - reminderBefore;
-          generated.add(
-            NotificationItem(
-              id: idCounter++,
-              type: 'ilac',
-              title: 'Planlı ilaç bildirimi',
-              message:
-                  '${item.ilacAdi} ilacı için bildirim $untilReminder dakika sonra gönderilecek (ilaç saatine $diff dakika var).',
-              time: 'Bugün ${item.hatirlatmaSaati}',
-              isRead: true,
-              priority: 'low',
-            ),
-          );
+          if (diff < 0) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç saati geçti',
+                message: '${item.ilacAdi} ilacı ($time) için ${diff.abs()} dakika gecikme var.',
+                time: 'Bugün $time',
+                isRead: false,
+                priority: 'high',
+              ),
+            );
+          } else if (diff <= reminderBefore) {
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'İlaç hatırlatması',
+                message: '${item.ilacAdi} ilacını ($time) kullanmana $diff dakika kaldı.',
+                time: 'Bugün $time',
+                isRead: false,
+                priority: diff <= 5 ? 'high' : 'medium',
+              ),
+            );
+          } else {
+            final untilReminder = diff - reminderBefore;
+            generated.add(
+              NotificationItem(
+                id: idCounter++,
+                type: 'ilac',
+                title: 'Planlı ilaç bildirimi',
+                message:
+                    '${item.ilacAdi} ilacı ($time) için bildirim $untilReminder dakika sonra gönderilecek (ilaç saatine $diff dakika var).',
+                time: 'Bugün $time',
+                isRead: true,
+                priority: 'low',
+              ),
+            );
+          }
         }
       }
 
@@ -191,6 +194,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day, hour, minute);
+  }
+
+  List<String> _timesOf(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty || value == '-') return const ['-'];
+    return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
   List<NotificationItem> get filteredNotifications {

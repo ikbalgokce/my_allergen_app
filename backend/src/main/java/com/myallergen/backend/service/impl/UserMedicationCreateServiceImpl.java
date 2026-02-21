@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -60,7 +59,7 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
                     return drugRepository.save(newDrug);
                 });
 
-        LocalTime hatirlatma = parseTimeOrNull(request.hatirlatmaSaati());
+        String hatirlatma = normalizeReminderTimes(request.hatirlatmaSaati());
         LocalDate baslangicTarihi = LocalDate.now();
         LocalDate bitisTarihi = calculateBitisTarihi(baslangicTarihi, savedDrug.getSureSiniri());
 
@@ -79,7 +78,7 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
                 savedDrug.getIlacAdi(),
                 userMedication.getIlacDozu(),
                 userMedication.getKullanimSikligi(),
-                hatirlatma != null ? hatirlatma.format(TIME_FORMATTER) : "-",
+                hatirlatma != null ? hatirlatma : "-",
                 baslangicTarihi.toString(),
                 bitisTarihi != null ? bitisTarihi.toString() : "-",
                 savedDrug.getSureSiniri()
@@ -94,15 +93,32 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
         userMedicationRepository.delete(userMedication);
     }
 
-    private LocalTime parseTimeOrNull(String raw) {
+    private String normalizeReminderTimes(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
             return null;
         }
-        try {
-            return LocalTime.parse(raw, TIME_FORMATTER);
-        } catch (DateTimeParseException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_TIME_FORMAT");
+
+        String[] parts = raw.split(",");
+        StringBuilder normalized = new StringBuilder();
+        for (String part : parts) {
+            String p = part.trim();
+            if (p.isEmpty()) continue;
+            try {
+                DateTimeFormatter parser = DateTimeFormatter.ofPattern("H:mm");
+                String formatted = parser.parse(p, java.time.LocalTime::from).format(TIME_FORMATTER);
+                if (!normalized.isEmpty()) {
+                    normalized.append(",");
+                }
+                normalized.append(formatted);
+            } catch (DateTimeParseException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_TIME_FORMAT");
+            }
         }
+
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return normalized.toString();
     }
 
     private LocalDate calculateBitisTarihi(LocalDate baslangicTarihi, String sureSiniriRaw) {

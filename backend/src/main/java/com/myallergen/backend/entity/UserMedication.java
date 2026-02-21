@@ -7,7 +7,6 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Entity
 @Table(name = "kullanici_ilac")
@@ -34,8 +33,8 @@ public class UserMedication {
     @Column(name = "kullanim_sikligi", length = 100)
     private String kullanimSikligi;
 
-    @Column(name = "hatirlatma_saati")
-    private LocalTime hatirlatmaSaati;
+    @Column(name = "hatirlatma_saati", length = 100)
+    private String hatirlatmaSaati;
 
     public UserMedication() {
     }
@@ -88,11 +87,11 @@ public class UserMedication {
         this.kullanimSikligi = kullanimSikligi;
     }
 
-    public LocalTime getHatirlatmaSaati() {
+    public String getHatirlatmaSaati() {
         return hatirlatmaSaati;
     }
 
-    public void setHatirlatmaSaati(LocalTime hatirlatmaSaati) {
+    public void setHatirlatmaSaati(String hatirlatmaSaati) {
         this.hatirlatmaSaati = hatirlatmaSaati;
     }
 }

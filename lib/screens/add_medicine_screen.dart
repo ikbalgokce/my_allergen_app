@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../services/medication_create_service.dart';
 import 'qr_scanner_screen.dart';
@@ -24,7 +24,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
   late String selectedMethod;
   String? selectedFrequency;
-  TimeOfDay? selectedTime;
+  List<TimeOfDay?> selectedTimes = [null];
   bool isSaving = false;
   bool allergyCheckPassed = false;
   bool isChecking = false;
@@ -38,10 +38,28 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     }
   }
 
-  void _selectTime() async {
+  int _requiredTimeCount(String? freq) {
+    if (freq == 'Günde 2 kez') return 2;
+    if (freq == 'Günde 3 kez') return 3;
+    return 1;
+  }
+
+  void _onFrequencyChanged(String? value) {
+    final count = _requiredTimeCount(value);
+    final List<TimeOfDay?> next = List<TimeOfDay?>.filled(count, null);
+    for (int i = 0; i < count && i < selectedTimes.length; i++) {
+      next[i] = selectedTimes[i];
+    }
+    setState(() {
+      selectedFrequency = value;
+      selectedTimes = next;
+    });
+  }
+
+  Future<void> _selectTime(int index) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: selectedTimes[index] ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -51,9 +69,10 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         );
       },
     );
+
     if (picked != null) {
       setState(() {
-        selectedTime = picked;
+        selectedTimes[index] = picked;
       });
     }
   }
@@ -72,7 +91,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('QR Kod Okundu: $result'),
+          content: Text('QR Kod okundu: $result'),
           backgroundColor: Colors.green,
         ),
       );
@@ -141,19 +160,41 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     );
   }
 
-  String? _formattedTime() {
-    if (selectedTime == null) return null;
-    final hh = selectedTime!.hour.toString().padLeft(2, '0');
-    final mm = selectedTime!.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
+  String? _formattedTimes() {
+    final filled = selectedTimes.whereType<TimeOfDay>().toList();
+    if (filled.isEmpty) return null;
+    return filled
+        .map((t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}')
+        .join(',');
   }
 
   Future<void> _submit() async {
     if (isSaving) return;
+
     if (_medicineNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('İlaç adı zorunlu'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    if (selectedFrequency == null || selectedFrequency!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Kullanım sıklığı seçiniz'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    if (selectedTimes.any((t) => t == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tüm kullanım saatlerini seçiniz'),
           backgroundColor: Colors.red.shade600,
         ),
       );
@@ -166,8 +207,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       ilacAdi: _medicineNameController.text.trim(),
       ilacDozu: _dosageController.text.trim().isEmpty ? null : _dosageController.text.trim(),
       kullanimSikligi: selectedFrequency,
-      hatirlatmaSaati: _formattedTime(),
+      hatirlatmaSaati: _formattedTimes(),
     );
+
     if (!mounted) return;
     setState(() => isSaving = false);
 
@@ -332,54 +374,62 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Gunde 1', child: Text('Günde 1 kez')),
-                            DropdownMenuItem(value: 'Gunde 2', child: Text('Günde 2 kez')),
-                            DropdownMenuItem(value: 'Gunde 3', child: Text('Günde 3 kez')),
-                            DropdownMenuItem(value: 'Haftada 1', child: Text('Haftada 1 kez')),
+                            DropdownMenuItem(value: 'Günde 1 kez', child: Text('Günde 1 kez')),
+                            DropdownMenuItem(value: 'Günde 2 kez', child: Text('Günde 2 kez')),
+                            DropdownMenuItem(value: 'Günde 3 kez', child: Text('Günde 3 kez')),
                           ],
-                          onChanged: (value) => setState(() => selectedFrequency = value),
+                          onChanged: _onFrequencyChanged,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      InkWell(
-                        onTap: _selectTime,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
+                      ...List.generate(selectedTimes.length, (index) {
+                        final time = selectedTimes[index];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: index == selectedTimes.length - 1 ? 0 : 10),
+                          child: InkWell(
+                            onTap: () => _selectTime(index),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(Icons.schedule, color: Colors.blue.shade500),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Hatırlatma Saati', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      selectedTime != null
-                                          ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
-                                          : 'Saat seçin',
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.schedule, color: Colors.blue.shade500),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${index + 1}. kullanım saati',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          time != null
+                                              ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+                                              : 'Saat seçin',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                                ],
                               ),
-                              Icon(Icons.chevron_right, color: Colors.grey.shade400),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                       const SizedBox(height: 24),
                       if (_medicineNameController.text.trim().isNotEmpty)
                         Container(
@@ -413,10 +463,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                       child: isChecking
                                           ? const Padding(
                                               padding: EdgeInsets.all(8),
-                                              child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 2,
-                                              ),
+                                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                             )
                                           : const Icon(Icons.shield_outlined, color: Colors.white),
                                     ),
@@ -444,8 +491,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                         ],
                                       ),
                                     ),
-                                    if (allergyCheckPassed)
-                                      const Icon(Icons.check_circle, color: Colors.white),
+                                    if (allergyCheckPassed) const Icon(Icons.check_circle, color: Colors.white),
                                   ],
                                 ),
                               ),
