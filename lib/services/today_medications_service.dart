@@ -8,6 +8,9 @@ class TodayMedicationItem {
   final String? ilacDozu;
   final String? kullanimSikligi;
   final String hatirlatmaSaati;
+  final String? baslangicTarihi;
+  final String? bitisTarihi;
+  final String? sureSiniri;
 
   const TodayMedicationItem({
     required this.ilacId,
@@ -15,6 +18,9 @@ class TodayMedicationItem {
     required this.ilacDozu,
     required this.kullanimSikligi,
     required this.hatirlatmaSaati,
+    required this.baslangicTarihi,
+    required this.bitisTarihi,
+    required this.sureSiniri,
   });
 
   factory TodayMedicationItem.fromJson(Map<String, dynamic> json) {
@@ -24,6 +30,9 @@ class TodayMedicationItem {
       ilacDozu: json['ilacDozu'] as String?,
       kullanimSikligi: json['kullanimSikligi'] as String?,
       hatirlatmaSaati: (json['hatirlatmaSaati'] as String?) ?? '-',
+      baslangicTarihi: json['baslangicTarihi'] as String?,
+      bitisTarihi: json['bitisTarihi'] as String?,
+      sureSiniri: json['sureSiniri'] as String?,
     );
   }
 }

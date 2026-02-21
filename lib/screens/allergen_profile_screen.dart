@@ -100,7 +100,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Alerjen Profilim', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text('Guvenliginiz icin', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                      Text('Güvenliğiniz için', style: TextStyle(fontSize: 14, color: Colors.grey)),
                     ],
                   ),
                 ],
@@ -157,7 +157,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5)],
                   ),
-                  child: const Text('Kayitli alerjen bulunamadi.'),
+                  child: const Text('Kayıtlı alerjen bulunamadı.'),
                 )
               else
                 ..._allergens.map(
@@ -205,7 +205,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Guvenliginiz icin alerjen bilgilerinizi guncel tutun.',
+                        'Güvenliğiniz için alerjen bilgilerinizi güncel tutun.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.amber.shade900,
@@ -260,7 +260,7 @@ class _AddAllergenScreenState extends State<_AddAllergenScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Alerjen adi',
+              'Alerjen adı',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
             ),
             const SizedBox(height: 8),
@@ -268,7 +268,7 @@ class _AddAllergenScreenState extends State<_AddAllergenScreen> {
               controller: _controller,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Orn: Penisilin',
+                hintText: 'Örn: Penisilin',
                 filled: true,
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(

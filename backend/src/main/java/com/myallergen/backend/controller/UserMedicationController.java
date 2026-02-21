@@ -7,6 +7,7 @@ import com.myallergen.backend.service.TodayMedicationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,5 +44,14 @@ public class UserMedicationController {
             @Valid @RequestBody UserMedicationCreateRequest request
     ) {
         return userMedicationCreateService.create(userId, request);
+    }
+
+    @DeleteMapping("/{userId}/medications/{ilacId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMedication(
+            @PathVariable Integer userId,
+            @PathVariable Integer ilacId
+    ) {
+        userMedicationCreateService.delete(userId, ilacId);
     }
 }

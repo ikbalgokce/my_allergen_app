@@ -5,4 +5,6 @@ import com.myallergen.backend.dto.UserMedicationCreateRequest;
 
 public interface UserMedicationCreateService {
     TodayMedicationItemResponse create(Integer userId, UserMedicationCreateRequest request);
+
+    void delete(Integer userId, Integer ilacId);
 }

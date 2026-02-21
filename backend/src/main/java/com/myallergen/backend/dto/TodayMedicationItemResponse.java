@@ -5,6 +5,9 @@ public record TodayMedicationItemResponse(
         String ilacAdi,
         String ilacDozu,
         String kullanimSikligi,
-        String hatirlatmaSaati
+        String hatirlatmaSaati,
+        String baslangicTarihi,
+        String bitisTarihi,
+        String sureSiniri
 ) {
 }

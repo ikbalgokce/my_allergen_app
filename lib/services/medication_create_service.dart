@@ -28,4 +28,19 @@ class MedicationCreateService {
       return false;
     }
   }
+
+  Future<bool> deleteMedication({
+    required int userId,
+    required int ilacId,
+  }) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/users/$userId/medications/$ilacId'),
+        headers: const {'Content-Type': 'application/json'},
+      );
+      return response.statusCode == 204;
+    } catch (_) {
+      return false;
+    }
+  }
 }

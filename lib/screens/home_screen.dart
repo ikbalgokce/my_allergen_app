@@ -1,9 +1,10 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/risk_warning_service.dart';
+import '../services/medication_create_service.dart';
 import '../services/today_medications_service.dart';
 import '../services/user_profile_service.dart';
 import 'add_medicine_screen.dart';
@@ -28,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TodayMedicationsService _todayMedicationsService = TodayMedicationsService();
+  final MedicationCreateService _medicationCreateService = MedicationCreateService();
   final RiskWarningService _riskWarningService = RiskWarningService();
   final Map<String, bool> _takenState = {};
 
@@ -58,8 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         await _loadTakenStateFromStorage(items);
       } catch (_) {
-        // Aldim cache'i okunamasa bile ilac listesi gosterilmeye devam etsin.
+        // Aldım cache'i okunamasa bile liste gösterilsin.
       }
+
       if (!mounted) return;
       setState(() {
         _todayMedications = items;
@@ -67,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _loadError = 'Ilac bilgileri yuklenemedi';
+        _loadError = 'İlaç bilgileri yüklenemedi';
       });
     } finally {
       if (mounted) {
@@ -94,20 +97,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _takenStorageKey => 'taken_${widget.userId}_$_dateKey';
 
   Future<void> _loadTakenStateFromStorage(List<TodayMedicationItem> items) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_takenStorageKey);
-      if (raw == null || raw.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_takenStorageKey);
+    if (raw == null || raw.isEmpty) return;
 
-      final savedKeys = (jsonDecode(raw) as List<dynamic>).cast<String>().toSet();
-      _takenState.clear();
-      for (final item in items) {
-        final key = _keyOf(item);
-        _takenState[key] = savedKeys.contains(key);
-      }
-    } catch (_) {
-      // Local cache bozulduysa ilac listesini engellemesin.
-      _takenState.clear();
+    final savedKeys = (jsonDecode(raw) as List<dynamic>).cast<String>().toSet();
+    _takenState.clear();
+    for (final item in items) {
+      final key = _keyOf(item);
+      _takenState[key] = savedKeys.contains(key);
     }
   }
 
@@ -117,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final takenKeys = _takenState.entries.where((entry) => entry.value).map((entry) => entry.key).toList();
       await prefs.setString(_takenStorageKey, jsonEncode(takenKeys));
     } catch (_) {
-      // Kayit basarisiz olsa bile UI akisini bozma.
+      // Kayıt başarısız olsa bile UI akışını bozma.
     }
   }
 
@@ -132,6 +130,60 @@ class _HomeScreenState extends State<HomeScreen> {
       _userName = result.fullName.isNotEmpty ? result.fullName : _userName;
       _userEmail = result.mail;
     });
+  }
+
+  Future<void> _confirmDeleteMedication(TodayMedicationItem item) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('İlacı Çıkart'),
+        content: Text('${item.ilacAdi} ilacını çıkartmak istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
+            child: const Text('Evet', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+
+    final ok = await _medicationCreateService.deleteMedication(
+      userId: widget.userId,
+      ilacId: item.ilacId,
+    );
+
+    if (!mounted) return;
+
+    if (ok) {
+      final key = _keyOf(item);
+      setState(() {
+        _todayMedications = _todayMedications.where((m) => m.ilacId != item.ilacId).toList();
+        _takenState.remove(key);
+      });
+      await _saveTakenStateToStorage();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('İlaç listeden çıkarıldı'),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('İlaç çıkarılamadı'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -164,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                   const SizedBox(height: 24),
                   const Text(
-                    'BUGUNKU ILACLAR',
+                    'İLAÇLAR',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -174,8 +226,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildTodayMedicationSection(),
-                  const SizedBox(height: 24),
-                  _buildWeeklyCard(),
                 ],
               ),
             ),
@@ -271,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _buildQuickActionCard(
             context,
             icon: Icons.add_circle,
-            title: 'Ilac Ekle',
+            title: 'İlaç Ekle',
             color: Colors.blue,
             onTap: () {
               Navigator.push(
@@ -316,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
         child: Text(
-          _loadError ?? 'Bugun icin ilac kaydi bulunamadi.',
+          _loadError ?? 'Bugün için ilaç kaydı bulunamadı.',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
       );
@@ -370,123 +420,193 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final dose = (item.ilacDozu ?? '').trim().isEmpty ? '-' : item.ilacDozu!;
     final siklik = (item.kullanimSikligi ?? '').trim().isEmpty ? '-' : item.kullanimSikligi!;
-    final subtitle = 'Saat: ${item.hatirlatmaSaati}  |  Doz: $dose  |  Siklik: $siklik';
+    final baslangic = (item.baslangicTarihi ?? '').trim().isEmpty ? '-' : item.baslangicTarihi!;
+    final bitis = (item.bitisTarihi ?? '').trim().isEmpty ? '-' : item.bitisTarihi!;
+    final sureSiniri = (item.sureSiniri ?? '').trim();
+
+    final ilacAdi = _formatDrugTitle(item.ilacAdi, bitis, sureSiniri);
+    final subtitle = 'Saat: ${item.hatirlatmaSaati}  |  Doz: $dose  |  Sıklık: $siklik';
     final key = _keyOf(item);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: taken ? Colors.green.shade50 : Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              taken ? Icons.check_circle : Icons.access_time,
-              color: taken ? Colors.green.shade600 : Colors.blue.shade600,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.ilacAdi,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: () async {
-                  setState(() {
-                    _takenState[key] = !taken;
-                  });
-                  await _saveTakenStateToStorage();
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: taken ? null : LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
-                    color: taken ? Colors.green.shade100 : null,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    taken ? 'Aldim (isaretli)' : 'Aldim',
-                    style: TextStyle(
-                      color: taken ? Colors.green.shade800 : Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: taken ? Colors.green.shade50 : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  taken ? Icons.check_circle : Icons.access_time,
+                  color: taken ? Colors.green.shade600 : Colors.blue.shade600,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ilacAdi,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 28 / 1.75, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => _confirmDeleteMedication(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Icon(Icons.close, size: 17, color: Colors.red.shade600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Text(
+                        'Başlangıç Tarihi: $baslangic',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.deepOrange.shade200),
+                      ),
+                      child: Text(
+                        'Bitiş Tarihi: $bitis',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.deepOrange.shade900,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    setState(() {
+                      _takenState[key] = !taken;
+                    });
+                    await _saveTakenStateToStorage();
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 42,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: taken ? null : LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
+                      color: taken ? Colors.green.shade100 : null,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      taken ? 'Aldım (işaretli)' : 'Aldım',
+                      style: TextStyle(
+                        color: taken ? Colors.green.shade900 : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DrugInformationScreen(
-                        drugId: item.ilacId,
-                        drugName: item.ilacAdi,
-                      ),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.blue.shade400, Colors.purple.shade500]),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.white, size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        'Bilgilendirme',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DrugInformationScreen(
+                          drugId: item.ilacId,
+                          drugName: item.ilacAdi,
                         ),
                       ),
-                    ],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.blue.shade400, Colors.purple.shade500]),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.18),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Bilgilendirme',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -497,39 +617,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWeeklyCard() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _StatItem(value: '-', label: 'Alinan'),
-          _StatItem(value: '-', label: 'Kacirilan'),
-          _StatItem(value: '-', label: 'Uyum'),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      ],
-    );
+  String _formatDrugTitle(String ilacAdi, String bitisTarihi, String sureSiniri) {
+    if (bitisTarihi != '-') return ilacAdi;
+    if (sureSiniri.isEmpty) return ilacAdi;
+    return '$ilacAdi ($sureSiniri)';
   }
 }

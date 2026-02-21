@@ -85,13 +85,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => _original = updated);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bilgiler guncellendi')),
+        const SnackBar(content: Text('Bilgiler güncellendi')),
       );
       Navigator.pop(context, updated);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Guncelleme basarisiz')),
+        const SnackBar(content: Text('Güncelleme başarısız')),
       );
     } finally {
       if (mounted) {
@@ -154,11 +154,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const SizedBox(height: 12),
                               _field(_soyadController, 'Soyad'),
                               const SizedBox(height: 12),
-                              _field(_mailController, 'Mail', keyboardType: TextInputType.emailAddress),
+                              _field(_mailController, 'E-posta', keyboardType: TextInputType.emailAddress),
                               const SizedBox(height: 12),
-                              _field(_sifreController, 'Sifre'),
+                              _field(_sifreController, 'Şifre'),
                               const SizedBox(height: 12),
-                              _field(_yasController, 'Yas', keyboardType: TextInputType.number),
+                              _field(_yasController, 'Yaş', keyboardType: TextInputType.number),
                             ],
                           ),
                         ),
@@ -241,10 +241,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       validator: (value) {
         final v = (value ?? '').trim();
         if (v.isEmpty) return '$label zorunlu';
-        if (label == 'Mail' && !v.contains('@')) return 'Gecerli mail girin';
-        if (label == 'Yas') {
+        if (label == 'E-posta' && !v.contains('@')) return 'Geçerli e-posta girin';
+        if (label == 'Yaş') {
           final age = int.tryParse(v);
-          if (age == null || age < 0) return 'Gecerli yas girin';
+          if (age == null || age < 0) return 'Geçerli yaş girin';
         }
         return null;
       },

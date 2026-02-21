@@ -109,12 +109,12 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Guvenli Ilac',
+                'Güvenli İlaç',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               const SizedBox(height: 8),
               Text(
-                'Bu ilac alerjen profilinizle uyumludur.',
+                'Bu ilaç alerjen profilinizle uyumludur.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
               ),
@@ -153,7 +153,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     if (_medicineNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Ilac adi zorunlu'),
+          content: const Text('İlaç adı zorunlu'),
           backgroundColor: Colors.red.shade600,
         ),
       );
@@ -174,7 +174,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Ilac basariyla eklendi'),
+          content: const Text('İlaç başarıyla eklendi'),
           backgroundColor: Colors.green.shade600,
         ),
       );
@@ -182,7 +182,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Ilac eklenemedi'),
+          content: const Text('İlaç eklenemedi'),
           backgroundColor: Colors.red.shade600,
         ),
       );
@@ -231,11 +231,11 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ilac Ekle',
+                          'İlaç Ekle',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
                         ),
                         Text(
-                          'Yeni ilac kaydi olustur',
+                          'Yeni ilaç kaydı oluştur',
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
@@ -288,21 +288,21 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'ILAC BILGILERI',
+                        'İLAÇ BİLGİLERİ',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
                       ),
                       const SizedBox(height: 12),
                       _buildTextField(
                         controller: _medicineNameController,
-                        label: 'Ilac Adi',
-                        hint: 'Orn: Parol 500mg',
+                        label: 'İlaç Adı',
+                        hint: 'Örn: Parol 500mg',
                         icon: Icons.medication,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         controller: _dosageController,
                         label: 'Doz',
-                        hint: 'Orn: 1 tablet',
+                        hint: 'Örn: 1 tablet',
                         icon: Icons.medical_services,
                       ),
                       const SizedBox(height: 16),
@@ -321,7 +321,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                         child: DropdownButtonFormField<String>(
                           value: selectedFrequency,
                           decoration: InputDecoration(
-                            labelText: 'Kullanim Sikligi',
+                            labelText: 'Kullanım Sıklığı',
                             prefixIcon: Icon(Icons.access_time, color: Colors.blue.shade500),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -332,9 +332,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Gunde 1', child: Text('Gunde 1 kez')),
-                            DropdownMenuItem(value: 'Gunde 2', child: Text('Gunde 2 kez')),
-                            DropdownMenuItem(value: 'Gunde 3', child: Text('Gunde 3 kez')),
+                            DropdownMenuItem(value: 'Gunde 1', child: Text('Günde 1 kez')),
+                            DropdownMenuItem(value: 'Gunde 2', child: Text('Günde 2 kez')),
+                            DropdownMenuItem(value: 'Gunde 3', child: Text('Günde 3 kez')),
                             DropdownMenuItem(value: 'Haftada 1', child: Text('Haftada 1 kez')),
                           ],
                           onChanged: (value) => setState(() => selectedFrequency = value),
@@ -364,12 +364,12 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Hatirlatma Saati', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                    Text('Hatırlatma Saati', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                                     const SizedBox(height: 4),
                                     Text(
                                       selectedTime != null
                                           ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
-                                          : 'Saat secin',
+                                          : 'Saat seçin',
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                                     ),
                                   ],
@@ -426,7 +426,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           const Text(
-                                            'Alerji Kontrolu',
+                                            'Alerji Kontrolü',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 16,
@@ -437,8 +437,8 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                             isChecking
                                                 ? 'Kontrol ediliyor...'
                                                 : allergyCheckPassed
-                                                    ? 'Guvenli'
-                                                    : 'Ilaci kontrol et',
+                                                    ? 'Güvenli'
+                                                    : 'İlacı kontrol et',
                                             style: const TextStyle(color: Colors.white, fontSize: 12),
                                           ),
                                         ],
@@ -467,7 +467,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Ilac eklemeden once alerji kontrolu yapmanizi oneririz.',
+                                'İlaç eklemeden önce alerji kontrolü yapmanızı öneririz.',
                                 style: TextStyle(fontSize: 13, color: Colors.blue.shade800, height: 1.5),
                               ),
                             ),
@@ -508,7 +508,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text(
-                            'Ilac Ekle',
+                            'İlaç Ekle',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                   ),

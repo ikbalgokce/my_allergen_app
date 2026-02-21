@@ -13,7 +13,7 @@ class MainScreen extends StatefulWidget {
   const MainScreen({
     super.key,
     required this.userId,
-    this.userName = 'Kullanici',
+    this.userName = 'Kullanıcı',
     this.userEmail = '',
   });
 
@@ -33,8 +33,8 @@ class _MainScreenState extends State<MainScreen> {
         userEmail: widget.userEmail,
       ),
       AllergenProfileScreen(userId: widget.userId),
-      const NotificationsScreen(),
-      const SettingsScreen(),
+      NotificationsScreen(userId: widget.userId),
+      SettingsScreen(userId: widget.userId),
     ];
 
     return Scaffold(
@@ -49,7 +49,7 @@ class _MainScreenState extends State<MainScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Ana Sayfa'),
           BottomNavigationBarItem(icon: Icon(Icons.shield), label: 'Alerjen'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Bildirim'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Bildirimler'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),
         ],
       ),

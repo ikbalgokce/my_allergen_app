@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Lutfen tum alanlari doldurun'),
+          content: const Text('Lütfen tüm alanları doldurun'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_kvkkAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('KVKK metnini okuyup onaylamalisiniz'),
+          content: const Text('KVKK metnini okuyup onaylamalısınız'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result.userId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Kullanici bilgisi alinamadi'),
+              content: const Text('Kullanıcı bilgisi alınamadı'),
               backgroundColor: Colors.red.shade600,
               behavior: SnackBarBehavior.floating,
             ),
@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(
             builder: (context) => MainScreen(
               userId: result.userId!,
-              userName: fullName.isNotEmpty ? fullName : 'Kullanici',
+              userName: fullName.isNotEmpty ? fullName : 'Kullanıcı',
               userEmail: _emailController.text.trim(),
             ),
           ),
@@ -97,20 +97,20 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (result.statusCode == 404 || result.code == 'MAIL_WRONG' || result.message == 'MAIL_WRONG') {
-        setState(() => _emailError = 'Mail yanlis');
+        setState(() => _emailError = 'Mail yanlış');
         _emailFocusNode.requestFocus();
         return;
       }
 
       if (result.statusCode == 401 || result.code == 'PASSWORD_WRONG' || result.message == 'PASSWORD_WRONG') {
-        setState(() => _passwordError = 'Sifre yanlis');
+        setState(() => _passwordError = 'Şifre yanlış');
         _passwordFocusNode.requestFocus();
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Giris basarisiz'),
+          content: Text(result.message ?? 'Giriş başarısız'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Sunucuya baglanilamadi'),
+          content: const Text('Sunucuya bağlanılamadı'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'KVKK Aydinlatma Metni',
+                    'KVKK Aydınlatma Metni',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Text(
-                    'Bu uygulamada girilen veriler, ilac takibi hizmeti vermek amaciyla islenir.',
+                    'Bu uygulamada girilen veriler, ilaç takibi hizmeti vermek amacıyla işlenir.',
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.6),
                   ),
                 ),
@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text(
-                    'Okudum ve Onayliyorum',
+                    'Okudum ve Onaylıyorum',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -235,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Ilac Takip',
+                    'İlaç Takip',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -262,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Giris Yap',
+                          'Giriş Yap',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -306,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                           decoration: InputDecoration(
-                            labelText: 'Sifre',
+                            labelText: 'Şifre',
                             errorText: _passwordError,
                             prefixIcon: Icon(Icons.lock, color: Colors.cyan.shade600),
                             suffixIcon: IconButton(
@@ -331,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onChanged: (v) => setState(() => _rememberMe = v ?? false),
                                   activeColor: Colors.cyan.shade600,
                                 ),
-                                const Text('Beni Hatirla'),
+                                const Text('Beni Hatırla'),
                               ],
                             ),
                             TextButton(
@@ -340,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                               ),
                               child: Text(
-                                'Sifremi Unuttum',
+                                'Şifremi Unuttum',
                                 style: TextStyle(color: Colors.cyan.shade700, fontWeight: FontWeight.bold),
                               ),
                             ),
@@ -363,7 +363,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const Expanded(
                                 child: Text(
-                                  'KVKK Aydinlatma Metni\'ni onayliyorum',
+                                  'KVKK Aydınlatma Metni\'ni onaylıyorum',
                                   style: TextStyle(fontSize: 13, color: Colors.black87),
                                 ),
                               ),
@@ -389,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : const Text(
-                                    'Giris Yap',
+                                    'Giriş Yap',
                                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                           ),
@@ -398,14 +398,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('Hesabiniz yok mu? '),
+                            const Text('Hesabınız yok mu? '),
                             TextButton(
                               onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const RegisterScreen()),
                               ),
                               child: Text(
-                                'Kayit Ol',
+                                'Kayıt Ol',
                                 style: TextStyle(color: Colors.cyan.shade700, fontWeight: FontWeight.bold),
                               ),
                             ),

@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _confirmPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Lutfen tum alanlari doldurun'),
+          content: const Text('Lütfen tüm alanları doldurun'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -50,7 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (yas == null || yas < 0 || yas > 130) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Yas bilgisi gecerli bir sayi olmali (0-130)'),
+          content: const Text('Yaş bilgisi geçerli bir sayı olmalı (0-130)'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -62,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Sifreler eslesmiyor'),
+          content: const Text('Şifreler eşleşmiyor'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -74,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_kvkkAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('KVKK metnini okuyup onaylamalisiniz'),
+          content: const Text('KVKK metnini okuyup onaylamalısınız'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -99,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if ((result.statusCode == 201 || result.statusCode == 200) && result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Kayit basarili! Giris yapabilirsiniz.'),
+            content: const Text('Kayıt başarılı! Giriş yapabilirsiniz.'),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -112,7 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (result.statusCode == 409 || result.code == 'MAIL_EXISTS') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Bu e-posta zaten kayitli'),
+            content: const Text('Bu e-posta zaten kayıtlı'),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -123,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Kayit islemi basarisiz'),
+          content: Text(result.message ?? 'Kayıt işlemi başarısız'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -133,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Sunucuya baglanilamadi'),
+          content: const Text('Sunucuya bağlanılamadı'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -161,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'KVKK Aydinlatma Metni',
+                    'KVKK Aydınlatma Metni',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -174,17 +174,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Text(
-                    '''6698 sayili Kisisel Verilerin Korunmasi Kanunu (KVKK) uyarinca, kisisel verileriniz Ilac Takip Uygulamasi tarafindan asagida belirtilen kapsamda islenebilir.
+                    '''6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca, kişisel verileriniz İlaç Takip Uygulaması tarafından aşağıda belirtilen kapsamda işlenebilir.
 
 Toplanan Veriler:
-- Ad, soyad ve iletisim bilgileri
-- Saglik bilgileri (ilac kullanimi, alerji)
-- Uygulama kullanim verileri
+- Ad, soyad ve iletişim bilgileri
+- Sağlık bilgileri (ilaç kullanımı, alerji)
+- Uygulama kullanım verileri
 
-Verilerin Islenme Amaci:
-- Ilac takibi ve hatirlatma hizmeti sunmak
-- Alerji kontrolu yapmak
-- Uygulamayi gelistirmek''',
+Verilerin İşlenme Amacı:
+- İlaç takibi ve hatırlatma hizmeti sunmak
+- Alerji kontrolü yapmak
+- Uygulamayı geliştirmek''',
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.6),
                   ),
                 ),
@@ -203,7 +203,7 @@ Verilerin Islenme Amaci:
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text(
-                    'Okudum ve Onayliyorum',
+                    'Okudum ve Onaylıyorum',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -264,7 +264,7 @@ Verilerin Islenme Amaci:
                     ),
                     const SizedBox(width: 12),
                     const Text(
-                      'Kayit Ol',
+                      'Kayıt Ol',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -295,12 +295,12 @@ Verilerin Islenme Amaci:
                           const SizedBox(height: 16),
                           TextField(controller: _surnameController, decoration: _inputDecoration('Soyad', Icons.person_outline)),
                           const SizedBox(height: 16),
-                          TextField(controller: _usernameController, decoration: _inputDecoration('Kullanici Adi', Icons.alternate_email)),
+                          TextField(controller: _usernameController, decoration: _inputDecoration('Kullanıcı Adı', Icons.alternate_email)),
                           const SizedBox(height: 16),
                           TextField(
                             controller: _ageController,
                             keyboardType: TextInputType.number,
-                            decoration: _inputDecoration('Yas', Icons.cake_outlined),
+                            decoration: _inputDecoration('Yaş', Icons.cake_outlined),
                           ),
                           const SizedBox(height: 16),
                           TextField(
@@ -312,7 +312,7 @@ Verilerin Islenme Amaci:
                           TextField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: _inputDecoration('Sifre', Icons.lock).copyWith(
+                            decoration: _inputDecoration('Şifre', Icons.lock).copyWith(
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -326,7 +326,7 @@ Verilerin Islenme Amaci:
                           TextField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
-                            decoration: _inputDecoration('Sifre Tekrar', Icons.lock_outline).copyWith(
+                            decoration: _inputDecoration('Şifre Tekrar', Icons.lock_outline).copyWith(
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
@@ -359,14 +359,14 @@ Verilerin Islenme Amaci:
                                       children: [
                                         const TextSpan(text: 'KVKK '),
                                         TextSpan(
-                                          text: 'Aydinlatma Metni',
+                                          text: 'Aydınlatma Metni',
                                           style: TextStyle(
                                             color: Colors.blue.shade600,
                                             fontWeight: FontWeight.bold,
                                             decoration: TextDecoration.underline,
                                           ),
                                         ),
-                                        const TextSpan(text: '\'ni okudum ve onayliyorum'),
+                                        const TextSpan(text: '\'ni okudum ve onaylıyorum'),
                                       ],
                                     ),
                                   ),
@@ -391,7 +391,7 @@ Verilerin Islenme Amaci:
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     )
                                   : const Text(
-                                      'Kayit Ol',
+                                      'Kayıt Ol',
                                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                     ),
                             ),

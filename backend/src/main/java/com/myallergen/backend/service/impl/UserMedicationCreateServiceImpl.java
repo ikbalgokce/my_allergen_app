@@ -4,6 +4,7 @@ import com.myallergen.backend.dto.TodayMedicationItemResponse;
 import com.myallergen.backend.dto.UserMedicationCreateRequest;
 import com.myallergen.backend.entity.Drug;
 import com.myallergen.backend.entity.UserMedication;
+import com.myallergen.backend.entity.UserMedicationId;
 import com.myallergen.backend.repository.DrugRepository;
 import com.myallergen.backend.repository.UserMedicationRepository;
 import com.myallergen.backend.repository.UserRepository;
@@ -16,11 +17,20 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class UserMedicationCreateServiceImpl implements UserMedicationCreateService {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+)");
+    private static final List<DateTimeFormatter> DATE_FORMATTERS = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    );
 
     private final UserRepository userRepository;
     private final DrugRepository drugRepository;
@@ -41,12 +51,18 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
         userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"));
 
-        Drug drug = new Drug();
-        drug.setIlacAdi(request.ilacAdi().trim());
-        drug.setKullanimSikligi(request.kullanimSikligi());
-        Drug savedDrug = drugRepository.save(drug);
+        String ilacAdi = request.ilacAdi().trim();
+        Drug savedDrug = drugRepository.findFirstByIlacAdiIgnoreCase(ilacAdi)
+                .orElseGet(() -> {
+                    Drug newDrug = new Drug();
+                    newDrug.setIlacAdi(ilacAdi);
+                    newDrug.setKullanimSikligi(request.kullanimSikligi());
+                    return drugRepository.save(newDrug);
+                });
 
         LocalTime hatirlatma = parseTimeOrNull(request.hatirlatmaSaati());
+        LocalDate baslangicTarihi = LocalDate.now();
+        LocalDate bitisTarihi = calculateBitisTarihi(baslangicTarihi, savedDrug.getSureSiniri());
 
         UserMedication userMedication = new UserMedication();
         userMedication.setKullaniciId(userId);
@@ -54,7 +70,8 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
         userMedication.setIlacDozu(request.ilacDozu());
         userMedication.setKullanimSikligi(request.kullanimSikligi());
         userMedication.setHatirlatmaSaati(hatirlatma);
-        userMedication.setBaslangicTarihi(LocalDate.now());
+        userMedication.setBaslangicTarihi(baslangicTarihi);
+        userMedication.setBitisTarihi(bitisTarihi);
         userMedicationRepository.save(userMedication);
 
         return new TodayMedicationItemResponse(
@@ -62,8 +79,19 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
                 savedDrug.getIlacAdi(),
                 userMedication.getIlacDozu(),
                 userMedication.getKullanimSikligi(),
-                hatirlatma != null ? hatirlatma.format(TIME_FORMATTER) : "-"
+                hatirlatma != null ? hatirlatma.format(TIME_FORMATTER) : "-",
+                baslangicTarihi.toString(),
+                bitisTarihi != null ? bitisTarihi.toString() : "-",
+                savedDrug.getSureSiniri()
         );
+    }
+
+    @Override
+    public void delete(Integer userId, Integer ilacId) {
+        UserMedicationId id = new UserMedicationId(userId, ilacId);
+        UserMedication userMedication = userMedicationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_MEDICATION_NOT_FOUND"));
+        userMedicationRepository.delete(userMedication);
     }
 
     private LocalTime parseTimeOrNull(String raw) {
@@ -75,5 +103,29 @@ public class UserMedicationCreateServiceImpl implements UserMedicationCreateServ
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_TIME_FORMAT");
         }
+    }
+
+    private LocalDate calculateBitisTarihi(LocalDate baslangicTarihi, String sureSiniriRaw) {
+        if (sureSiniriRaw == null || sureSiniriRaw.trim().isEmpty()) {
+            return null;
+        }
+
+        String normalized = sureSiniriRaw.trim();
+        Matcher matcher = NUMBER_PATTERN.matcher(normalized);
+        if (matcher.find()) {
+            int gun = Integer.parseInt(matcher.group(1));
+            if (gun > 0) {
+                return baslangicTarihi.plusDays(gun);
+            }
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                return LocalDate.parse(normalized, formatter);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        return null;
     }
 }

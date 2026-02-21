@@ -24,7 +24,10 @@ public class TodayMedicationServiceImpl implements TodayMedicationService {
                         row.getIlacAdi(),
                         row.getIlacDozu(),
                         row.getKullanimSikligi(),
-                        row.getHatirlatmaSaati() != null ? row.getHatirlatmaSaati() : "-"
+                        row.getHatirlatmaSaati() != null ? row.getHatirlatmaSaati() : "-",
+                        row.getBaslangicTarihi() != null ? row.getBaslangicTarihi() : "-",
+                        row.getBitisTarihi() != null ? row.getBitisTarihi() : "-",
+                        row.getSureSiniri()
                 ))
                 .toList();
     }

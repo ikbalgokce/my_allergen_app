@@ -56,14 +56,14 @@ class _DrugInformationScreenState extends State<DrugInformationScreen> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text('Bilgilendirme verileri yuklenemedi.'),
+                    child: Text('Bilgilendirme verileri yüklenemedi.'),
                   ),
                 );
               }
 
               final info = snapshot.data;
               if (info == null) {
-                return const Center(child: Text('Bilgilendirme verisi bulunamadi.'));
+                return const Center(child: Text('Bilgilendirme verisi bulunamadı.'));
               }
 
               return ListView(
@@ -93,14 +93,14 @@ class _DrugInformationScreenState extends State<DrugInformationScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _infoBlock('Kisa bilgi', info.kisaBilgi),
-                  _infoBlock('Uyari proaktif not', info.uyariProaktifNot),
-                  _infoBlock('Sure siniri', info.sureSiniri),
-                  _infoBlock('Ilac besin etkilesimi', info.ilacBesinEtkilesimi),
-                  _infoBlock('Ilac yasam tarzi etkilesimi', info.ilacYasamTarziEtkilesimi),
-                  _infoBlock('Uygulama sekli', info.uygulamaSekli),
-                  _infoBlock('Ilac ilac cakismasi', info.ilacIlacCakismasi),
-                  _infoBlock('Kullanim sikligi', info.kullanimSikligi),
+                  _infoBlock('Kısa bilgi', info.kisaBilgi),
+                  _infoBlock('Uyarı proaktif not', info.uyariProaktifNot),
+                  _infoBlock('Süre sınırı', info.sureSiniri),
+                  _infoBlock('İlaç besin etkileşimi', info.ilacBesinEtkilesimi),
+                  _infoBlock('İlaç yaşam tarzı etkileşimi', info.ilacYasamTarziEtkilesimi),
+                  _infoBlock('Uygulama şekli', info.uygulamaSekli),
+                  _infoBlock('İlaç ilaç çakışması', info.ilacIlacCakismasi),
+                  _infoBlock('Kullanım sıklığı', info.kullanimSikligi),
                 ],
               );
             },

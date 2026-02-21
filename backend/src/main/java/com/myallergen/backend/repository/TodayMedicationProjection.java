@@ -10,4 +10,10 @@ public interface TodayMedicationProjection {
     String getKullanimSikligi();
 
     String getHatirlatmaSaati();
+
+    String getBaslangicTarihi();
+
+    String getBitisTarihi();
+
+    String getSureSiniri();
 }
