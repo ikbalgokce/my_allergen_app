@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
@@ -10,22 +12,45 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _kvkkAccepted = false;
+  bool _isLoading = false;
 
-  void _register() {
+  Future<void> _register() async {
+    if (_isLoading) return;
+
     if (_nameController.text.isEmpty ||
         _surnameController.text.isEmpty ||
+        _usernameController.text.isEmpty ||
+        _ageController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Lütfen tüm alanları doldurun'),
+          content: const Text('Lutfen tum alanlari doldurun'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+      return;
+    }
+
+    final yas = int.tryParse(_ageController.text.trim());
+    if (yas == null || yas < 0 || yas > 130) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Yas bilgisi gecerli bir sayi olmali (0-130)'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -37,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Şifreler eşleşmiyor'),
+          content: const Text('Sifreler eslesmiyor'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -49,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_kvkkAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('KVKK metnini okuyup onaylamalısınız'),
+          content: const Text('KVKK metnini okuyup onaylamalisiniz'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -58,17 +83,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Başarılı kayıt
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Kayıt başarılı! Giriş yapabilirsiniz.'),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.register(
+        ad: _nameController.text.trim(),
+        soyad: _surnameController.text.trim(),
+        mail: _emailController.text.trim(),
+        sifre: _passwordController.text,
+        kullaniciAd: _usernameController.text.trim(),
+        yas: yas,
+      );
 
-    Navigator.pop(context);
+      if (!mounted) return;
+
+      if ((result.statusCode == 201 || result.statusCode == 200) && result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Kayit basarili! Giris yapabilirsiniz.'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+        Navigator.pop(context);
+        return;
+      }
+
+      if (result.statusCode == 409 || result.code == 'MAIL_EXISTS') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Bu e-posta zaten kayitli'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Kayit islemi basarisiz'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Sunucuya baglanilamadi'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _showKVKKDialog() {
@@ -86,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'KVKK Aydınlatma Metni',
+                    'KVKK Aydinlatma Metni',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -99,21 +174,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Text(
-                    '''6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, kişisel verileriniz veri sorumlusu olarak İlaç Takip Uygulaması tarafından aşağıda açıklanan kapsamda işlenebilecektir.
+                    '''6698 sayili Kisisel Verilerin Korunmasi Kanunu (KVKK) uyarinca, kisisel verileriniz Ilac Takip Uygulamasi tarafindan asagida belirtilen kapsamda islenebilir.
 
 Toplanan Veriler:
-• Ad, soyad ve iletişim bilgileri
-• Sağlık bilgileri (ilaç kullanımı, alerji bilgileri)
-• Uygulama kullanım verileri
+- Ad, soyad ve iletisim bilgileri
+- Saglik bilgileri (ilac kullanimi, alerji)
+- Uygulama kullanim verileri
 
-Verilerin İşlenme Amacı:
-• İlaç takibi ve hatırlatma hizmeti sunmak
-• Alerji kontrolü yapmak
-• Uygulamayı geliştirmek ve iyileştirmek
-
-Verileriniz, KVKK'da öngörülen temel ilkelere uygun olarak ve meşru amaçlar doğrultusunda işlenmektedir. Kişisel verilerinizle ilgili haklarınız hakkında detaylı bilgi için gizlilik politikamızı inceleyebilirsiniz.
-
-Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen kapsamda işlenmesini kabul ettiğinizi onaylıyorsunuz.''',
+Verilerin Islenme Amaci:
+- Ilac takibi ve hatirlatma hizmeti sunmak
+- Alerji kontrolu yapmak
+- Uygulamayi gelistirmek''',
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.6),
                   ),
                 ),
@@ -123,9 +194,7 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    setState(() {
-                      _kvkkAccepted = true;
-                    });
+                    setState(() => _kvkkAccepted = true);
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -134,7 +203,7 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text(
-                    'Okudum ve Onaylıyorum',
+                    'Okudum ve Onayliyorum',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -146,11 +215,23 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
     );
   }
 
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: Colors.blue.shade500),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -166,7 +247,6 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
         child: SafeArea(
           child: Column(
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -184,17 +264,12 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                     ),
                     const SizedBox(width: 12),
                     const Text(
-                      'Kayıt Ol',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Kayit Ol',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
-
-              // Form
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
@@ -216,106 +291,52 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Name
+                          TextField(controller: _nameController, decoration: _inputDecoration('Ad', Icons.person)),
+                          const SizedBox(height: 16),
+                          TextField(controller: _surnameController, decoration: _inputDecoration('Soyad', Icons.person_outline)),
+                          const SizedBox(height: 16),
+                          TextField(controller: _usernameController, decoration: _inputDecoration('Kullanici Adi', Icons.alternate_email)),
+                          const SizedBox(height: 16),
                           TextField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              labelText: 'Ad',
-                              prefixIcon: Icon(Icons.person, color: Colors.blue.shade500),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
-                              ),
-                            ),
+                            controller: _ageController,
+                            keyboardType: TextInputType.number,
+                            decoration: _inputDecoration('Yas', Icons.cake_outlined),
                           ),
                           const SizedBox(height: 16),
-
-                          // Surname
-                          TextField(
-                            controller: _surnameController,
-                            decoration: InputDecoration(
-                              labelText: 'Soyad',
-                              prefixIcon: Icon(Icons.person_outline, color: Colors.blue.shade500),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Email
                           TextField(
                             controller: _emailController,
-                            decoration: InputDecoration(
-                              labelText: 'E-posta',
-                              prefixIcon: Icon(Icons.email, color: Colors.blue.shade500),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
-                              ),
-                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: _inputDecoration('E-posta', Icons.email),
                           ),
                           const SizedBox(height: 16),
-
-                          // Password
                           TextField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'Şifre',
-                              prefixIcon: Icon(Icons.lock, color: Colors.blue.shade500),
+                            decoration: _inputDecoration('Sifre', Icons.lock).copyWith(
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                                   color: Colors.grey,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // Confirm Password
                           TextField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
-                            decoration: InputDecoration(
-                              labelText: 'Şifre Tekrar',
-                              prefixIcon: Icon(Icons.lock_outline, color: Colors.blue.shade500),
+                            decoration: _inputDecoration('Sifre Tekrar', Icons.lock_outline).copyWith(
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                                   color: Colors.grey,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureConfirmPassword = !_obscureConfirmPassword;
-                                  });
-                                },
-                              ),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+                                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // KVKK Checkbox
                           InkWell(
                             onTap: _showKVKKDialog,
                             child: Row(
@@ -326,9 +347,7 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                                     if (value == true) {
                                       _showKVKKDialog();
                                     } else {
-                                      setState(() {
-                                        _kvkkAccepted = false;
-                                      });
+                                      setState(() => _kvkkAccepted = false);
                                     }
                                   },
                                   activeColor: Colors.blue.shade500,
@@ -340,14 +359,14 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                                       children: [
                                         const TextSpan(text: 'KVKK '),
                                         TextSpan(
-                                          text: 'Aydınlatma Metni',
+                                          text: 'Aydinlatma Metni',
                                           style: TextStyle(
                                             color: Colors.blue.shade600,
                                             fontWeight: FontWeight.bold,
                                             decoration: TextDecoration.underline,
                                           ),
                                         ),
-                                        const TextSpan(text: '\'ni okudum ve onaylıyorum'),
+                                        const TextSpan(text: '\'ni okudum ve onayliyorum'),
                                       ],
                                     ),
                                   ),
@@ -356,27 +375,25 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
                             ),
                           ),
                           const SizedBox(height: 24),
-
-                          // Register Button
                           SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _register,
+                              onPressed: _isLoading ? null : _register,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue.shade500,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
-                              child: const Text(
-                                'Kayıt Ol',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text(
+                                      'Kayit Ol',
+                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
                             ),
                           ),
                         ],
@@ -396,6 +413,8 @@ Bu metni okuyup anladığınızı ve kişisel verilerinizin yukarıda belirtilen
   void dispose() {
     _nameController.dispose();
     _surnameController.dispose();
+    _usernameController.dispose();
+    _ageController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();

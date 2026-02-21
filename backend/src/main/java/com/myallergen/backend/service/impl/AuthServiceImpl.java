@@ -2,6 +2,7 @@ package com.myallergen.backend.service.impl;
 
 import com.myallergen.backend.dto.LoginRequest;
 import com.myallergen.backend.dto.LoginResponse;
+import com.myallergen.backend.dto.RegisterRequest;
 import com.myallergen.backend.entity.User;
 import com.myallergen.backend.exception.AuthException;
 import com.myallergen.backend.repository.UserRepository;
@@ -41,6 +42,32 @@ public class AuthServiceImpl implements AuthService {
                 user.getUserId(),
                 user.getAd(),
                 user.getSoyad()
+        );
+    }
+
+    @Override
+    public LoginResponse register(RegisterRequest request) {
+        if (userRepository.findByMail(request.mail()).isPresent()) {
+            throw new AuthException(HttpStatus.CONFLICT, "MAIL_EXISTS", "MAIL_EXISTS");
+        }
+
+        User user = new User();
+        user.setAd(request.ad().trim());
+        user.setSoyad(request.soyad().trim());
+        user.setMail(request.mail().trim());
+        user.setSifre(request.sifre());
+        user.setKullaniciAd(request.kullaniciAd().trim());
+        user.setYas(request.yas());
+
+        User saved = userRepository.save(user);
+
+        return new LoginResponse(
+                true,
+                "REGISTER_SUCCESS",
+                "REGISTER_SUCCESS",
+                saved.getUserId(),
+                saved.getAd(),
+                saved.getSoyad()
         );
     }
 }

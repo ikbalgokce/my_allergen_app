@@ -56,4 +56,45 @@ class AuthService {
       soyad: json['soyad'] as String?,
     );
   }
+
+  Future<LoginApiResult> register({
+    required String ad,
+    required String soyad,
+    required String mail,
+    required String sifre,
+    required String kullaniciAd,
+    required int yas,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/auth/register'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'ad': ad,
+        'soyad': soyad,
+        'mail': mail,
+        'sifre': sifre,
+        'kullaniciAd': kullaniciAd,
+        'yas': yas,
+      }),
+    );
+
+    Map<String, dynamic> json = {};
+    if (response.body.isNotEmpty) {
+      try {
+        json = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        json = {};
+      }
+    }
+
+    return LoginApiResult(
+      success: (json['success'] as bool?) ?? false,
+      statusCode: response.statusCode,
+      code: json['code'] as String?,
+      message: json['message'] as String?,
+      userId: (json['userId'] as num?)?.toInt(),
+      ad: json['ad'] as String?,
+      soyad: json['soyad'] as String?,
+    );
+  }
 }
