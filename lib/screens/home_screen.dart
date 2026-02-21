@@ -7,6 +7,7 @@ import '../services/risk_warning_service.dart';
 import '../services/today_medications_service.dart';
 import '../services/user_profile_service.dart';
 import 'add_medicine_screen.dart';
+import 'drug_information_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -381,6 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 50,
@@ -399,36 +401,96 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.ilacAdi, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  item.ilacAdi,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
               ],
             ),
           ),
-          InkWell(
-            onTap: () async {
-              setState(() {
-                _takenState[key] = !taken;
-              });
-              await _saveTakenStateToStorage();
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: taken ? null : LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
-                color: taken ? Colors.green.shade100 : null,
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              InkWell(
+                onTap: () async {
+                  setState(() {
+                    _takenState[key] = !taken;
+                  });
+                  await _saveTakenStateToStorage();
+                },
                 borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                taken ? 'Aldim (isaretli)' : 'Aldim',
-                style: TextStyle(
-                  color: taken ? Colors.green.shade800 : Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: taken ? null : LinearGradient(colors: [Colors.blue.shade500, Colors.purple.shade600]),
+                    color: taken ? Colors.green.shade100 : null,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    taken ? 'Aldim (isaretli)' : 'Aldim',
+                    style: TextStyle(
+                      color: taken ? Colors.green.shade800 : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DrugInformationScreen(
+                        drugId: item.ilacId,
+                        drugName: item.ilacAdi,
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [Colors.blue.shade400, Colors.purple.shade500]),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.white, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        'Bilgilendirme',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

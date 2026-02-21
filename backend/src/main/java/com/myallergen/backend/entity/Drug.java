@@ -22,6 +22,27 @@ public class Drug {
     @Column(name = "etkin_madde")
     private String etkinMadde;
 
+    @Column(name = "kisa_bilgi")
+    private String kisaBilgi;
+
+    @Column(name = "uyari_proaktif_not")
+    private String uyariProaktifNot;
+
+    @Column(name = "sure_siniri", length = 100)
+    private String sureSiniri;
+
+    @Column(name = "ilac_besin_etkilesimi")
+    private String ilacBesinEtkilesimi;
+
+    @Column(name = "ilac_yasam_tarzi_etkilesimi")
+    private String ilacYasamTarziEtkilesimi;
+
+    @Column(name = "uygulama_sekli", length = 100)
+    private String uygulamaSekli;
+
+    @Column(name = "ilac_ilac_cakismasi")
+    private String ilacIlacCakismasi;
+
     @Column(name = "kullanim_sikligi", length = 100)
     private String kullanimSikligi;
 
@@ -58,5 +79,61 @@ public class Drug {
 
     public void setKullanimSikligi(String kullanimSikligi) {
         this.kullanimSikligi = kullanimSikligi;
+    }
+
+    public String getKisaBilgi() {
+        return kisaBilgi;
+    }
+
+    public void setKisaBilgi(String kisaBilgi) {
+        this.kisaBilgi = kisaBilgi;
+    }
+
+    public String getUyariProaktifNot() {
+        return uyariProaktifNot;
+    }
+
+    public void setUyariProaktifNot(String uyariProaktifNot) {
+        this.uyariProaktifNot = uyariProaktifNot;
+    }
+
+    public String getSureSiniri() {
+        return sureSiniri;
+    }
+
+    public void setSureSiniri(String sureSiniri) {
+        this.sureSiniri = sureSiniri;
+    }
+
+    public String getIlacBesinEtkilesimi() {
+        return ilacBesinEtkilesimi;
+    }
+
+    public void setIlacBesinEtkilesimi(String ilacBesinEtkilesimi) {
+        this.ilacBesinEtkilesimi = ilacBesinEtkilesimi;
+    }
+
+    public String getIlacYasamTarziEtkilesimi() {
+        return ilacYasamTarziEtkilesimi;
+    }
+
+    public void setIlacYasamTarziEtkilesimi(String ilacYasamTarziEtkilesimi) {
+        this.ilacYasamTarziEtkilesimi = ilacYasamTarziEtkilesimi;
+    }
+
+    public String getUygulamaSekli() {
+        return uygulamaSekli;
+    }
+
+    public void setUygulamaSekli(String uygulamaSekli) {
+        this.uygulamaSekli = uygulamaSekli;
+    }
+
+    public String getIlacIlacCakismasi() {
+        return ilacIlacCakismasi;
+    }
+
+    public void setIlacIlacCakismasi(String ilacIlacCakismasi) {
+        this.ilacIlacCakismasi = ilacIlacCakismasi;
     }
 }
